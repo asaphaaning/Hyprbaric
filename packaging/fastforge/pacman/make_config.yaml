@@ -1,0 +1,43 @@
+display_name: Hyprbaric
+package_name: hyprbaric
+package_release: "1"
+licenses:
+  - AGPL-3.0-only
+groups:
+  - hyprland
+maintainer:
+  name: Hyprbaric maintainers
+  email: fh@frederikhaaning.dk
+installed_size: 52000
+icon: packaging/assets/hyprbaric.png
+metainfo: packaging/assets/hyprbaric.metainfo.xml
+generic_name: Hyprland Status Bar
+categories:
+  - System
+keywords:
+  - Hyprland
+  - Wayland
+  - Bar
+  - Status
+  - Panel
+startup_notify: false
+dependencies:
+  - hyprland
+  - gtk3
+  - gtk-layer-shell
+  - wayland
+  - xdg-desktop-portal-hyprland
+  - systemd
+optional_dependencies:
+  - "wireplumber: PipeWire audio volume and mute controls"
+  - "ddcutil: external display brightness controls"
+  - "networkmanager: Wi-Fi status and controls"
+  - "grim: screenshot capture"
+  - "slurp: screenshot and recording region selection"
+  - "wl-clipboard: copying screenshots and picked colors"
+  - "hyprpicker: color picker"
+  - "wf-recorder: screen recording"
+  - "hyprsunset: Night light"
+  - "xdg-user-dirs: user directory resolution"
+  - "power-profiles-daemon: power profile controls"
+  - "upower: power status"

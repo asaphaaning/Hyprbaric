@@ -1,0 +1,271 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../bindings/bindings.dart';
+import 'hypr_surface.dart';
+import 'primitives/primitives.dart';
+
+class WorkspaceStrip extends StatelessWidget {
+  const WorkspaceStrip({
+    super.key,
+    required this.status,
+    required this.settings,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onSelect,
+  });
+
+  final WorkspaceStatus status;
+  final WorkspaceSettingsStatus settings;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final int active = status.id;
+    final List<int> visibleWorkspaces = _visibleWorkspaceRange(
+      active,
+      settings.visibleCount,
+    );
+    return Row(
+      key: const ValueKey<String>('workspace-strip'),
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        WorkspaceNavButton(
+          icon: Icons.chevron_left_rounded,
+          label: 'Previous workspace',
+          onPressed: onPrevious,
+        ),
+        const SizedBox(width: HyprSpacing.xl),
+        for (final int index in visibleWorkspaces) ...<Widget>[
+          WorkspaceButton(
+            key: ValueKey<String>('workspace-indicator-$index'),
+            label: _workspaceIndicatorLabel(index, status, settings),
+            active: !status.isSpecial && index == active,
+            occupied: false,
+            onPressed: settings.clickable ? () => onSelect(index) : null,
+          ),
+          if (index != visibleWorkspaces.last)
+            const SizedBox(width: HyprSpacing.md),
+        ],
+        const SizedBox(width: HyprSpacing.xl),
+        WorkspaceNavButton(
+          icon: Icons.chevron_right_rounded,
+          label: 'Next workspace',
+          onPressed: onNext,
+        ),
+      ],
+    );
+  }
+}
+
+class WorkspaceStripPlaceholder extends StatelessWidget {
+  const WorkspaceStripPlaceholder({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const WorkspaceNavButton(
+          icon: Icons.chevron_left_rounded,
+          label: 'Previous workspace',
+        ),
+        const SizedBox(width: HyprSpacing.xl - HyprSpacing.hairline),
+        WorkspaceButton(label: label, active: true, occupied: false),
+      ],
+    );
+  }
+}
+
+class WorkspaceNavButton extends StatelessWidget {
+  const WorkspaceNavButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: IconButton(
+        key: ValueKey<String>('workspace-nav-$label'),
+        onPressed: onPressed,
+        style: _workspaceNavButtonStyle(),
+        icon: Icon(icon, size: HyprIconSizes.bar),
+      ),
+    );
+  }
+}
+
+class WorkspaceButton extends StatelessWidget {
+  const WorkspaceButton({
+    super.key,
+    required this.label,
+    required this.active,
+    required this.occupied,
+    this.onPressed,
+  });
+
+  final String label;
+  final bool active;
+  final bool occupied;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool active = this.active;
+    final bool occupied = this.occupied;
+    final Color foreground = active
+        ? HyprColors.accentSoft
+        : occupied
+        ? HyprColors.textMuted
+        : HyprColors.textFaint;
+    final Color fill = active
+        ? const Color(0x14384954)
+        : occupied
+        ? const Color(0x295C6B78)
+        : const Color(0x14384954);
+    final BorderSide border = active
+        ? const BorderSide(color: Color(0x6655A7FF), width: 1)
+        : occupied
+        ? const BorderSide(color: Color(0x245F7282), width: 1)
+        : BorderSide.none;
+    final List<BoxShadow> shadows = <BoxShadow>[
+      BoxShadow(
+        color: active ? const Color(0x2255A7FF) : Colors.transparent,
+        blurRadius: active ? 8 : 0,
+        spreadRadius: 0,
+      ),
+    ];
+
+    return HyprInteractiveTile(
+      semanticLabel: 'Workspace $label',
+      onPressed: onPressed,
+      width: 31,
+      height: 18,
+      color: Colors.transparent,
+      hoverColor: Colors.transparent,
+      borderColor: Colors.transparent,
+      hoverBorderColor: Colors.transparent,
+      clipBehavior: Clip.none,
+      duration: HyprMotion.workspace,
+      curve: HyprMotion.workspaceCurve,
+      pressedScale: 0.9,
+      scaleBuilder: (HyprInteractiveTileState state) {
+        if (state.pressed) {
+          return 0.9;
+        }
+        if (state.hovered) {
+          return 1.16;
+        }
+        return 1;
+      },
+      builder: (BuildContext context, HyprInteractiveTileState state) {
+        return Center(
+          child: AnimatedContainer(
+            duration: HyprMotion.workspace,
+            curve: HyprMotion.workspaceCurve,
+            width: active ? 31 : 22,
+            height: active ? 18 : 16,
+            decoration: ShapeDecoration(
+              color: fill,
+              shadows: shadows,
+              shape: RoundedSuperellipseBorder(
+                borderRadius: BorderRadius.circular(
+                  active ? HyprRadii.compact : HyprRadii.card,
+                ),
+                side: border,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.clip,
+                style: HyprTypography.workspace.copyWith(
+                  color: foreground,
+                  fontSize: active ? 10.5 : 9.5,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+List<int> _visibleWorkspaceRange(int active, int visibleCount) {
+  final int count = math.max(1, visibleCount);
+  final int clampedActive = math.max(1, active);
+  final int start = math.max(1, clampedActive - (count ~/ 2));
+  return List<int>.generate(count, (int offset) => start + offset);
+}
+
+String _workspaceIndicatorLabel(
+  int index,
+  WorkspaceStatus status,
+  WorkspaceSettingsStatus settings,
+) {
+  if (status.isSpecial && index == 1) {
+    final String name = status.name.trim();
+    return name.isEmpty ? 'S' : name;
+  }
+  if (settings.indicatorStyle == WorkspaceIndicatorStyle.numeric) {
+    return '$index';
+  }
+  return _romanNumeral(index);
+}
+
+String _romanNumeral(int value) {
+  if (value <= 0) {
+    return '$value';
+  }
+
+  const List<(int, String)> numerals = <(int, String)>[
+    (1000, 'M'),
+    (900, 'CM'),
+    (500, 'D'),
+    (400, 'CD'),
+    (100, 'C'),
+    (90, 'XC'),
+    (50, 'L'),
+    (40, 'XL'),
+    (10, 'X'),
+    (9, 'IX'),
+    (5, 'V'),
+    (4, 'IV'),
+    (1, 'I'),
+  ];
+  final StringBuffer buffer = StringBuffer();
+  int remaining = value;
+  for (final (int number, String numeral) in numerals) {
+    while (remaining >= number) {
+      buffer.write(numeral);
+      remaining -= number;
+    }
+  }
+  return buffer.toString();
+}
+
+ButtonStyle _workspaceNavButtonStyle() {
+  return hyprCompactIconButtonStyle(
+    size: HyprIconSizes.navigationButton,
+    radius: HyprRadii.panel,
+    foregroundColor: HyprColors.textFaint,
+    hoverForegroundColor: HyprColors.textMuted,
+  );
+}

@@ -1,0 +1,90 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+if [ -n "${FASTFORGE:-}" ]; then
+  fastforge="$FASTFORGE"
+elif command -v fastforge >/dev/null 2>&1; then
+  fastforge="fastforge"
+elif [ -x "$HOME/.pub-cache/bin/fastforge" ]; then
+  fastforge="$HOME/.pub-cache/bin/fastforge"
+else
+  echo "fastforge was not found. Install it or set FASTFORGE=/path/to/fastforge." >&2
+  exit 127
+fi
+
+cd "$repo_root"
+rinf gen
+
+release_jobs=${HYPRBARIC_RELEASE_JOBS:-}
+needs_appimage=true
+
+if [ -n "$release_jobs" ]; then
+  case ",$release_jobs," in
+    *,linux-appimage,*) ;;
+    *) needs_appimage=false ;;
+  esac
+fi
+
+real_ldd=$(command -v ldd || true)
+[ -n "$real_ldd" ] || {
+  echo "ldd was not found." >&2
+  exit 127
+}
+
+fetch_verified() {
+  destination=$1
+  url=$2
+  expected_sha256=$3
+
+  if [ -s "$destination" ] &&
+    printf '%s  %s\n' "$expected_sha256" "$destination" | sha256sum --check --status
+  then
+    return
+  fi
+
+  mkdir -p "$(dirname -- "$destination")"
+  download=$(mktemp "$destination.XXXXXX")
+  curl --proto '=https' --tlsv1.2 --fail --location --retry 3 \
+    --output "$download" \
+    "$url"
+  printf '%s  %s\n' "$expected_sha256" "$download" | sha256sum --check --status
+  mv "$download" "$destination"
+}
+
+if [ "$needs_appimage" = true ]; then
+  runtime_dir="${XDG_CACHE_HOME:-$HOME/.cache}/hyprbaric"
+  runtime_file="$runtime_dir/appimage-runtime-x86_64"
+  appimagetool_file="$runtime_dir/appimagetool-1.9.1-x86_64.AppImage"
+
+  fetch_verified \
+    "$runtime_file" \
+    https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 \
+    1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf
+  fetch_verified \
+    "$appimagetool_file" \
+    https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage \
+    ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+  chmod 0755 "$appimagetool_file"
+
+  export HYPRBARIC_APPIMAGE_RUNTIME="$runtime_file"
+  export HYPRBARIC_REAL_APPIMAGETOOL="$appimagetool_file"
+  export APPIMAGE_EXTRACT_AND_RUN=1
+fi
+
+export HYPRBARIC_REAL_LDD="$real_ldd"
+
+if [ -n "$release_jobs" ]; then
+  set -- --jobs "$release_jobs" "$@"
+fi
+
+PATH="$repo_root/packaging/toolchain:$PATH" \
+  "$fastforge" --no-version-check release --name linux-packages "$@"
+
+find dist -type f -name '*.pacman' -exec sh -c '
+  for package do
+    mv -- "$package" "${package%.pacman}.pkg.tar.xz"
+  done
+' sh {} +

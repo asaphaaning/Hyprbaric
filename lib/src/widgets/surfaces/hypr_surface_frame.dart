@@ -1,0 +1,1 @@
+enum HyprSurfaceFrame { panel, popover }

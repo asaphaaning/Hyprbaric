@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+
+real_ldd=${HYPRBARIC_REAL_LDD:?HYPRBARIC_REAL_LDD is required}
+target=
+
+for argument do
+  case "$argument" in
+    -*) ;;
+    *) target=$argument ;;
+  esac
+done
+
+if [ -n "$target" ] && [ -f "$target" ] && ! readelf --file-header "$target" >/dev/null 2>&1; then
+  # Fastforge expects a string result even when no shared libraries apply.
+  printf '\n'
+  exit 0
+fi
+
+exec "$real_ldd" "$@"

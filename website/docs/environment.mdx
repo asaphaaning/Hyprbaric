@@ -1,0 +1,75 @@
+---
+sidebar_position: 6
+title: Environment and files
+description: Environment variables hyprbaric reads, the files it writes, and where captures are saved.
+hide_lead: true
+kicker: Reference
+---
+
+Not everything hyprbaric respects lives in `config.toml`. This page covers the rest of the surface you can influence: environment variables, the files hyprbaric reads and writes, where screenshots and recordings land, and how logging is controlled.
+
+## Environment variables
+
+| Variable | Read by | Effect |
+| --- | --- | --- |
+| `HYPRBARIC_CONFIG` | Configuration loader | An explicit configuration file path, tried before every XDG location. |
+| `RUST_LOG` | Logging | Standard `tracing` filter directive. Defaults to `info`. |
+| `HYPRBARIC_LOG` | Logging | Set to `json` for structured logs. Anything else keeps the compact format. |
+| `RUST_LOG_STYLE` | Logging | Set to `never` to disable ANSI colors in the compact format. |
+| `TERMINAL` | App launcher | Command used to run desktop entries marked `Terminal=true`. Parsed shell-style, so arguments are allowed. |
+| `XDG_DATA_HOME`, `XDG_DATA_DIRS` | Launcher, tray, portal identity | Desktop entry and icon theme lookup, and where hyprbaric’s own desktop entry is written. |
+
+### Terminal applications
+
+Desktop entries that request a terminal are launched with `$TERMINAL` when it is set and the program exists. Otherwise hyprbaric tries, in order:
+
+```text
+x-terminal-emulator -e   kitty -e   alacritty -e   foot -e
+wezterm start --         gnome-terminal --   konsole -e
+```
+
+If none is found, launching a terminal application fails with a “missing terminal emulator” report rather than silently doing nothing.
+
+## Configuration file precedence
+
+hyprbaric loads the **first** file that exists, in this order, and does not merge the others:
+
+1. `$HYPRBARIC_CONFIG`
+2. `$XDG_CONFIG_HOME/hyprbaric/config.toml` (or `~/.config/hyprbaric/config.toml`)
+3. Each `$XDG_CONFIG_DIRS/hyprbaric/config.toml`, defaulting to `/etc/xdg/hyprbaric/config.toml`
+
+If no file exists, every table falls back to its built-in defaults.
+
+The settings window always writes to the **writable user path** (`$XDG_CONFIG_HOME/hyprbaric/config.toml`, or `~/.config/hyprbaric/config.toml` when `XDG_CONFIG_HOME` is unset), even if the file that was loaded came from an XDG system directory. Keep machine-wide defaults in `/etc/xdg` and personal changes in the user file.
+
+Writes from the settings window are atomic. hyprbaric parses the existing document, applies only the keys it owns, writes `config.toml.tmp`, and renames it over `config.toml`, so comments and unrelated tables in your file survive.
+
+## Files hyprbaric writes
+
+| Path | Purpose |
+| --- | --- |
+| `$XDG_CONFIG_HOME/hyprbaric/config.toml` | The user configuration, written by the settings window. |
+| `$XDG_DATA_HOME/applications/com.hyprbaric.Hyprbaric.desktop` | The desktop entry that gives hyprbaric a portal identity for global shortcuts. Rewritten only when its content would change. |
+
+## Where captures are saved
+
+Screenshots and recordings resolve their destination through `xdg-user-dir`, falling back to `$HOME` when `xdg-user-dirs` is not installed. Both directories are created on demand.
+
+| Action | Directory | File name |
+| --- | --- | --- |
+| Screenshot | `xdg-user-dir PICTURES`, else `~/Pictures` → `Screenshots/` | `Screenshot_YYYY-MM-DD-HH-MM-SS.png` |
+| Recording | `xdg-user-dir VIDEOS`, else `~/Videos` → `Recordings/` | `Recording_YYYY-MM-DD-HH-MM-SS.mp4` |
+
+These destinations are not configurable in TOML. Point the XDG user directories at the folders you want instead. A screenshot is also copied to the Wayland clipboard as `image/png`, and a picked color is copied as text, both through `wl-copy` when it is available. The file is still written when `wl-copy` is missing, and only the clipboard step is reported as failed.
+
+## Session services
+
+- **Notifications**: hyprbaric observes `org.freedesktop.Notifications` traffic on the session bus as a D-Bus monitor. It reads the notifications your existing daemon receives rather than claiming the name itself.
+- **System tray**: StatusNotifier/AppIndicator items are discovered over D-Bus, and no configuration is required.
+- **Network**: status and connection changes go through NetworkManager’s D-Bus API. The popup’s settings action opens the first available system editor: `nm-connection-editor`, then `gnome-control-center wifi`, then `systemsettings kcm_networkmanagement`.
+- **Audio**: volume, mute, and endpoint state come from PipeWire through `wpctl`.
+- **Power and Caffeine**: battery data from UPower, profiles from power-profiles-daemon, and idle/sleep inhibition and session actions from systemd-logind.
+
+## Logging
+
+The `RUST_LOG`, `HYPRBARIC_LOG`, and `RUST_LOG_STYLE` rows above are the whole logging surface. [Troubleshooting](./troubleshooting) covers what each one does, where the output goes, and how to read it back out of the journal.

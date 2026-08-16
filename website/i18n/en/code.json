@@ -1,0 +1,10 @@
+{
+  "theme.SearchBar.label": {
+    "message": "Search the docs",
+    "description": "The ARIA label and placeholder for the search input"
+  },
+  "theme.SearchBar.seeAll": {
+    "message": "all results",
+    "description": "The label of the link to the full search page, shown in the search dropdown footer"
+  }
+}

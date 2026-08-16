@@ -1,0 +1,78 @@
+core:
+  - id: hyprland
+    packages:
+      arch: [hyprland]
+      debian: [hyprland]
+      rpm: [hyprland]
+  - id: layer_shell
+    packages:
+      arch: [gtk3, gtk-layer-shell, wayland]
+      debian: [libgtk-3-0 | libgtk-3-0t64, libgtk-layer-shell0, libwayland-client0]
+      rpm: [gtk3, gtk-layer-shell, libwayland-client]
+service:
+  - id: global_shortcuts
+    packages:
+      arch: [xdg-desktop-portal-hyprland]
+      debian: [xdg-desktop-portal-hyprland]
+      rpm: [xdg-desktop-portal-hyprland]
+optional:
+  - id: audio
+    packages:
+      arch: [wireplumber]
+      debian: [wireplumber]
+      rpm: [wireplumber]
+  - id: brightness
+    packages:
+      arch: [ddcutil]
+      debian: [ddcutil]
+      rpm: [ddcutil]
+  - id: network
+    packages:
+      arch: [networkmanager]
+      debian: [network-manager]
+      rpm: [NetworkManager]
+  - id: launcher
+    packages:
+      arch: [gtk3]
+      debian: [libgtk-3-bin]
+      rpm: [gtk3]
+  - id: screenshot
+    packages:
+      arch: [grim, slurp]
+      debian: [grim, slurp]
+      rpm: [grim, slurp]
+  - id: clipboard
+    packages:
+      arch: [wl-clipboard]
+      debian: [wl-clipboard]
+      rpm: [wl-clipboard]
+  - id: color_picker
+    packages:
+      arch: [hyprpicker]
+      debian: [hyprpicker]
+      rpm: [hyprpicker]
+  - id: recording
+    packages:
+      arch: [wf-recorder, slurp]
+      debian: [wf-recorder, slurp]
+      rpm: [wf-recorder, slurp]
+  - id: night_light
+    packages:
+      arch: [hyprsunset]
+      debian: [hyprsunset]
+      rpm: [hyprsunset]
+  - id: caffeine
+    packages:
+      arch: [systemd]
+      debian: [systemd]
+      rpm: [systemd]
+  - id: power
+    packages:
+      arch: [systemd, power-profiles-daemon, upower]
+      debian: [systemd, power-profiles-daemon, upower]
+      rpm: [systemd, power-profiles-daemon, upower]
+  - id: user_directories
+    packages:
+      arch: [xdg-user-dirs]
+      debian: [xdg-user-dirs]
+      rpm: [xdg-user-dirs]

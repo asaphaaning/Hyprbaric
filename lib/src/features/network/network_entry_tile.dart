@@ -1,0 +1,322 @@
+import 'package:flutter/material.dart';
+
+import '../../bindings/bindings.dart';
+import '../../widgets/hypr_surface.dart';
+import '../../widgets/primitives/primitives.dart';
+import 'network_chrome.dart';
+import 'network_entry_state.dart';
+import 'network_formatting.dart';
+import 'network_password_prompt.dart';
+import 'network_signal_bars.dart';
+
+class NetworkEntryTile extends StatefulWidget {
+  const NetworkEntryTile({
+    super.key,
+    required this.entry,
+    required this.expanded,
+    required this.selected,
+    required this.passwordController,
+    required this.passwordFocusNode,
+    required this.showPassword,
+    required this.errorMessage,
+    required this.onTap,
+    required this.onTogglePasswordVisibility,
+    required this.onCancel,
+    required this.onSubmit,
+  });
+
+  final NetworkEntry entry;
+  final bool expanded;
+  final bool selected;
+  final TextEditingController passwordController;
+  final FocusNode passwordFocusNode;
+  final bool showPassword;
+  final String? errorMessage;
+  final VoidCallback onTap;
+  final VoidCallback onTogglePasswordVisibility;
+  final VoidCallback onCancel;
+  final VoidCallback onSubmit;
+
+  @override
+  State<NetworkEntryTile> createState() => NetworkEntryTileState();
+}
+
+class NetworkEntryTileState extends State<NetworkEntryTile> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  void _setHovered(bool hovered) {
+    if (_hovered == hovered) {
+      return;
+    }
+    setState(() => _hovered = hovered);
+  }
+
+  void _setPressed(bool pressed) {
+    if (_pressed == pressed) {
+      return;
+    }
+    setState(() => _pressed = pressed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final NetworkEntry entry = widget.entry;
+    final bool interactive = !entry.isConnecting;
+    final bool hovered = interactive && _hovered;
+    final bool pressed = interactive && _pressed;
+    final Color rowColor = pressed
+        ? NetworkMenuColors.rowPressed
+        : hovered
+        ? NetworkMenuColors.rowHover
+        : entry.isActive
+        ? Colors.transparent
+        : widget.selected
+        ? NetworkMenuColors.rowSelected
+        : Colors.transparent;
+    final Color stripeColor = entry.isActive
+        ? HyprColors.accent
+        : hovered
+        ? const Color(0xFF697481)
+        : const Color(0xFF3C4652);
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: widget.expanded ? 30 : 0),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Semantics(
+          button: interactive,
+          enabled: interactive,
+          label: entry.isActive ? '${entry.ssid}, connected' : entry.ssid,
+          child: MouseRegion(
+            cursor: interactive
+                ? SystemMouseCursors.click
+                : SystemMouseCursors.basic,
+            onEnter: (_) => _setHovered(true),
+            onExit: (_) {
+              _setHovered(false);
+              _setPressed(false);
+            },
+            child: Listener(
+              onPointerDown: interactive ? (_) => _setPressed(true) : null,
+              onPointerUp: interactive ? (_) => _setPressed(false) : null,
+              onPointerCancel: interactive ? (_) => _setPressed(false) : null,
+              child: AnimatedContainer(
+                duration: HyprMotion.hover,
+                curve: HyprMotion.hoverCurve,
+                transform: Matrix4.translationValues(hovered ? 1 : 0, 0, 0),
+                decoration: ShapeDecoration(
+                  color: rowColor,
+                  shape: RoundedSuperellipseBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    side: BorderSide.none,
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  shape: RoundedSuperellipseBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 7, 10, 7),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        InkWell(
+                          onTap: interactive ? widget.onTap : null,
+                          hoverColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          overlayColor: const WidgetStatePropertyAll<Color>(
+                            Colors.transparent,
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              AnimatedContainer(
+                                duration: HyprMotion.hover,
+                                width: 3,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: stripeColor,
+                                  borderRadius: const BorderRadius.horizontal(
+                                    right: Radius.circular(2),
+                                  ),
+                                  boxShadow: entry.isActive
+                                      ? const <BoxShadow>[
+                                          BoxShadow(
+                                            color: Color(0x7716B7F4),
+                                            blurRadius: 6,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              NetworkSignalBars(
+                                strength: entry.strength,
+                                active: entry.isActive,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      entry.ssid,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: HyprTypography.compactMonoStrong
+                                          .copyWith(
+                                            color: entry.isActive
+                                                ? HyprColors.text
+                                                : NetworkMenuColors.fg1,
+                                            fontSize: HyprTypography.size(12),
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: -0.06,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    _NetworkEntryMeta(entry: entry),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              if (entry.secure) ...<Widget>[
+                                const _NetworkSecurityBadge(secure: true),
+                              ] else ...<Widget>[
+                                const _NetworkSecurityBadge(secure: false),
+                              ],
+                              if (entry.isConnecting) ...<Widget>[
+                                const SizedBox(width: 10),
+                                const SizedBox(
+                                  width: 10,
+                                  height: 10,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.4,
+                                  ),
+                                ),
+                              ] else if (entry.isActive) ...<Widget>[
+                                const SizedBox(width: 10),
+                                const _NetworkActionBadge(label: 'live'),
+                              ] else if (widget.selected) ...<Widget>[
+                                const SizedBox(width: 10),
+                                const _NetworkActionBadge(label: 'join'),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (widget.expanded)
+                          NetworkPasswordPrompt(
+                            ssid: entry.ssid,
+                            controller: widget.passwordController,
+                            focusNode: widget.passwordFocusNode,
+                            showPassword: widget.showPassword,
+                            connecting: entry.isConnecting,
+                            errorMessage: widget.errorMessage,
+                            onToggleVisibility:
+                                widget.onTogglePasswordVisibility,
+                            onCancel: widget.onCancel,
+                            onSubmit: widget.onSubmit,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NetworkEntryMeta extends StatelessWidget {
+  const _NetworkEntryMeta({required this.entry});
+
+  final NetworkEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          networkStrengthLabel(entry.strength),
+          style: HyprTypography.compactMono.copyWith(
+            color: NetworkMenuColors.fg3,
+            fontSize: HyprTypography.size(9),
+            letterSpacing: 0.54,
+            height: 1,
+          ),
+        ),
+        const SizedBox(width: 5),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            color: NetworkMenuColors.fg3,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox.square(dimension: 2),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          entry.secure ? 'WPA' : 'OPEN',
+          style: HyprTypography.compactMono.copyWith(
+            color: NetworkMenuColors.fg3,
+            fontSize: HyprTypography.size(9),
+            letterSpacing: 0.54,
+            height: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NetworkSecurityBadge extends StatelessWidget {
+  const _NetworkSecurityBadge({required this.secure});
+
+  final bool secure;
+
+  @override
+  Widget build(BuildContext context) {
+    return HyprInlineTag(
+      label: secure ? '⊠' : '◌',
+      color: Colors.black.withValues(alpha: 0.45),
+      borderColor: const Color(0x993C4652),
+      textColor: NetworkMenuColors.fg3,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      borderRadius: BorderRadius.circular(2),
+      uppercase: false,
+      style: HyprTypography.compactMonoStrong.copyWith(
+        fontSize: HyprTypography.size(8.5),
+        letterSpacing: 0.85,
+        height: 1,
+      ),
+    );
+  }
+}
+
+class _NetworkActionBadge extends StatelessWidget {
+  const _NetworkActionBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return HyprInlineTag(
+      label: label,
+      color: Colors.transparent,
+      padding: HyprSpacing.none,
+      borderRadius: HyprRadii.zero,
+      textColor: NetworkMenuColors.accent,
+      style: HyprTypography.compactMonoStrong.copyWith(
+        fontSize: HyprTypography.size(9),
+        letterSpacing: 0.9,
+        height: 1,
+      ),
+    );
+  }
+}

@@ -1,0 +1,13 @@
+display_name: Hyprbaric
+icon: packaging/assets/hyprbaric.png
+metainfo: packaging/assets/hyprbaric.metainfo.xml
+generic_name: Hyprland Status Bar
+categories:
+  - System
+keywords:
+  - Hyprland
+  - Wayland
+  - Bar
+  - Status
+  - Panel
+startup_notify: false

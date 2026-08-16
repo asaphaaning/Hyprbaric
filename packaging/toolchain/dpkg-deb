@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+real_dpkg_deb="${HYPRBARIC_REAL_DPKG_DEB:-/usr/bin/dpkg-deb}"
+
+if [ ! -x "$real_dpkg_deb" ]; then
+  echo "dpkg-deb wrapper could not find the real dpkg-deb binary" >&2
+  exit 127
+fi
+
+for arg in "$@"; do
+  if [ -d "$arg/usr/share/applications" ]; then
+    "$script_dir/desktop-entry-sanitize" "$arg"/usr/share/applications/*.desktop
+  fi
+
+  if [ -f "$arg/DEBIAN/control" ] && [ -d "$arg/opt" ]; then
+    package_name=$(sed -n 's/^Package:[[:space:]]*//p' "$arg/DEBIAN/control")
+    [ -n "$package_name" ] || {
+      echo "dpkg-deb wrapper could not determine the package name" >&2
+      exit 1
+    }
+
+    mkdir -p "$arg/usr/bin"
+    launcher="$arg/usr/bin/$package_name"
+    printf '#!/bin/sh\nexec "/opt/%s/%s" "$@"\n' \
+      "$package_name" "$package_name" >"$launcher"
+    chmod 0755 "$launcher"
+
+    sed -i \
+      -e '\#^[[:space:]]*ln -s /opt/[^ ]*/[^ ]* /usr/bin/[^ ]*$#d' \
+      -e '\#^[[:space:]]*chmod +x /usr/bin/[^ ]*$#d' \
+      "$arg/DEBIAN/postinst"
+    sed -i \
+      -e '\#^[[:space:]]*rm /usr/bin/[^ ]*$#d' \
+      "$arg/DEBIAN/postrm"
+  fi
+done
+
+exec "$real_dpkg_deb" "$@"

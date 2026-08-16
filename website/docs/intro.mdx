@@ -1,0 +1,33 @@
+---
+sidebar_position: 1
+title: hyprbaric
+sidebar_label: Overview
+description: A native Hyprland status bar built with Flutter and Rust.
+kicker: Get started
+---
+
+## What it includes
+
+- Workspaces, active window title, tray, notifications, audio, power, and network widgets
+- Screenshots, color picking, recording, night light, and caffeine controls
+- TOML configuration with a settings GUI for appearance, modules, workspaces, night light, and shortcuts
+
+## Development
+
+```bash
+flutter pub get
+flutter run -d linux
+```
+
+For native changes:
+
+```bash
+cargo test --manifest-path native/hyprbaric/Cargo.toml
+cargo test --manifest-path native/hub/Cargo.toml
+flutter analyze lib test
+flutter test
+```
+
+## Packaging
+
+Packaging metadata lives in `packaging/`. Current targets are AppImage, DEB, RPM, and Pacman.

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+for desktop in "$@"; do
+  [ -f "$desktop" ] || continue
+
+  sed -i \
+    -e 's/^Version=.*/Version=1.0/' \
+    -e 's/^Categories=System;Utility;$/Categories=System;/' \
+    -e 's/^Categories=System;Utility$/Categories=System;/' \
+    "$desktop"
+done

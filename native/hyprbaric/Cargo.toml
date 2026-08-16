@@ -1,0 +1,42 @@
+[package]
+name = "hyprbaric"
+version = "0.1.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+rinf = "8.10.0"
+rinf-router = "1.5.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+toml = "0.8.23"
+toml_edit = "0.22.27"
+tokio = { version = "1.45.0", features = ["rt", "macros", "time", "sync", "process", "io-util", "net", "fs"] }
+tower = { version = "0.5.2", features = ["util"] }
+ashpd = { version = "0.13.13", features = ["global_shortcuts", "settings"] }
+hyprland = { version = "0.4.0-beta.3", default-features = false, features = ["tokio", "listener", "dispatch", "data"] }
+hyprland-macros = "0.4.0-beta.3"
+futures-util = "0.3"
+dbus = "0.9.10"
+thiserror = "2.0.12"
+tracing = "0.1.41"
+tracing-journald = "0.3.2"
+tracing-log = "0.2.0"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "json"] }
+supervised = "0.3.0"
+zbus = { version = "5.12.0", features = ["tokio"] }
+freedesktop-desktop-entry = "0.8.1"
+humantime-serde = "1.1.1"
+notify = "8.2.0"
+shlex = "1.3.0"
+nmrs = "3.4.2"
+system-tray = "0.8.5"
+image = { version = "0.25.6", default-features = false, features = ["png"] }
+jiff = "0.2.24"
+brightness = "0.8.0"
+
+# Uncomment below to target the web.
+# tokio_with_wasm = { version = "0.8.5", features = ["rt", "macros", "time"] }
+# wasm-bindgen = "0.2.100"

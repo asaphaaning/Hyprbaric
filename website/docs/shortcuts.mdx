@@ -1,0 +1,79 @@
+---
+sidebar_position: 5
+title: Shortcuts
+description: Customize hyprbaric’s built-in global actions without maintaining compositor binds by hand.
+kicker: Global shortcuts
+---
+
+hyprbaric owns a fixed vocabulary of global actions. At startup it registers each enabled action with the XDG Global Shortcuts portal and reconciles the corresponding Hyprland `global` bind. You do not need to add separate Hyprland binds for these actions.
+
+Open hyprbaric’s **Settings → Keybinds** panel to edit a binding interactively, or declare it in TOML. The GUI persists to the same user `config.toml`, so a manual configuration and GUI changes compose normally.
+
+## Customize a binding
+
+Each action has a table inside `[shortcuts]`. A bound mapping needs a `key`. Its `modifiers` list is optional and its `phase` defaults to `"press"`. Omit an action table entirely to keep that action’s built-in binding.
+
+```toml title="config.toml"
+[shortcuts.controls]
+modifiers = ["logo", "shift"]
+key = "O"
+phase = "press"
+```
+
+`phase` is `"press"` by default. Use `"release"` when the action should run on key release. The default app launcher uses `"release"` with the standalone Super key so modifier chords can still begin normally.
+
+Supported modifiers are `logo`, `ctrl`, `shift`, `alt`, and `num`. `super` and `meta` are aliases for `logo`, and `control` is an alias for `ctrl`. Key names are normalized: ordinary keys are uppercased, `Print` and `PrintScreen` resolve to `Print`, and `XF86…` hardware key names keep their spelling. Key names cannot be empty or contain `,`, `+`, `<`, or `>`.
+
+To turn off a built-in action without changing any others:
+
+```toml title="config.toml"
+[shortcuts.toggle_caffeine]
+state = "disabled"
+```
+
+Configuration is partial. Any shortcut you do not mention keeps its built-in mapping.
+
+## Default shortcut reference
+
+| Action | Default chord | Phase | What it does | Config name |
+| --- | --- | --- | --- | --- |
+| App launcher | Super | `release` | Opens or closes the app launcher. | `app_launcher` |
+| Controls | Super + S | `press` | Opens or closes the controls popup. | `controls` |
+| Bar settings | Super + Shift + C | `press` | Opens the settings window. | `bar_settings` |
+| Session launcher | Super + Escape | `press` | Opens or closes the session launcher. | `session_launcher` |
+| Lock session | Super + L | `press` | Locks the current session. | `lock_session` |
+| Screenshot region | Super + Shift + S | `press` | Starts interactive region capture. | `capture_region` |
+| Screenshot window | Super + Print | `press` | Captures the focused window. | `capture_window` |
+| Screenshot full screen | Print | `press` | Captures the full screen. | `capture_full_screen` |
+| Color picker | Super + Shift + P | `press` | Starts interactive color picking. | `color_pick` |
+| Toggle recording | Super + Shift + R | `press` | Starts or stops interactive recording. | `toggle_recording` |
+| Toggle DND | Super + Shift + D | `press` | Toggles notification do-not-disturb mode. | `toggle_do_not_disturb` |
+| Toggle Night light | Super + Shift + N | `press` | Toggles night light. | `toggle_night_light` |
+| Toggle Caffeine | Super + Shift + F12 | `press` | Toggles caffeine mode. | `toggle_caffeine` |
+| Volume up | XF86AudioRaiseVolume | `press` | Raises output volume. | `volume_up` |
+| Volume down | XF86AudioLowerVolume | `press` | Lowers output volume. | `volume_down` |
+| Toggle mute | XF86AudioMute | `press` | Toggles output mute. | `toggle_mute` |
+| Brightness up | XF86MonBrightnessUp | `press` | Raises display brightness. | `brightness_up` |
+| Brightness down | XF86MonBrightnessDown | `press` | Lowers display brightness. | `brightness_down` |
+
+## A complete override example
+
+```toml title="config.toml"
+[shortcuts.app_launcher]
+modifiers = ["logo"]
+key = "SPACE"
+
+[shortcuts.capture_region]
+modifiers = ["logo", "shift"]
+key = "R"
+phase = "release"
+
+[shortcuts.toggle_caffeine]
+state = "disabled"
+```
+
+The two bound mappings above activate normally. Only caffeine is omitted from portal registration and Hyprland bind reconciliation.
+
+## Avoid conflicts
+
+hyprbaric can reconcile its own `global` binds, but it will not overwrite a conflicting non-hyprbaric bind. Pick a different chord in the Keybindings panel or configuration file if a mapping is already owned by your Hyprland setup. Restart hyprbaric after manual TOML edits to reconcile the new mapping.

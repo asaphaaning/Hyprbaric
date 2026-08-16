@@ -1,0 +1,125 @@
+name: Release packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to rebuild and publish.
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.0
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.1
+          components: rustfmt
+
+      - name: Install Linux packaging prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            binutils clang cmake libarchive-tools libdbus-1-dev libgtk-3-dev \
+            libgtk-layer-shell-dev liblzma-dev libwayland-dev ninja-build \
+            pkg-config rpm
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          app_version=$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)(\+[0-9]+)?$/\1/p' pubspec.yaml)
+          native_version=$(sed -nE 's/^version = "([^"]+)"$/\1/p' native/hyprbaric/Cargo.toml | head -n 1)
+          hub_version=$(sed -nE 's/^version = "([^"]+)"$/\1/p' native/hub/Cargo.toml | head -n 1)
+          test -n "$app_version"
+          test "v$app_version" = "$RELEASE_TAG"
+          test "$native_version" = "$app_version"
+          test "$hub_version" = "$app_version"
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Install RINF code generator
+        run: cargo install rinf_cli --version 8.10.0 --locked
+
+      - name: Verify generated bindings and Dart formatting
+        run: |
+          rinf gen
+          dart format lib test pigeons
+          dart run pigeon --input pigeons/layer_shell_api.dart
+          dart format lib test pigeons
+          dart run build_runner build
+          dart format lib test pigeons
+          git diff --exit-code
+
+      - name: Verify Flutter
+        run: |
+          flutter analyze
+          flutter test
+
+      - name: Verify Rust
+        run: |
+          cargo fmt --all -- --check
+          cargo test --workspace --locked
+
+      - name: Install Fastforge
+        run: dart pub global activate fastforge 0.6.12
+
+      - name: Build Linux packages
+        env:
+          FASTFORGE: /home/runner/.pub-cache/bin/fastforge
+        run: ./packaging/build-linux-packages
+
+      - name: Verify package outputs
+        run: |
+          set -eu
+          ./packaging/verify-linux-packages
+          app_name=$(sed -n 's/^name:[[:space:]]*//p' pubspec.yaml)
+          package_version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
+          package_dir="dist/$package_version"
+          mkdir release-assets
+          cp \
+            "$package_dir/$app_name-$package_version-linux.AppImage" \
+            "$package_dir/$app_name-$package_version-linux.deb" \
+            "$package_dir/$app_name-$package_version-linux.rpm" \
+            "$package_dir/$app_name-$package_version-linux.pkg.tar.xz" \
+            release-assets/
+          (
+            cd release-assets
+            sha256sum -- * > SHA256SUMS
+          )
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* --generate-notes
+          fi

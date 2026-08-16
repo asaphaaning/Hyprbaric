@@ -1,0 +1,113 @@
+---
+sidebar_position: 2
+title: Install hyprbaric
+sidebar_label: Installation
+description: Install the latest hyprbaric release package, build a distro package, or use the development checkout.
+kicker: Get started
+---
+
+import InstallTabs from '@site/src/components/InstallTabs';
+
+## Requirements
+
+Package names below are the Arch names.
+
+### Required
+
+| Package | Provides |
+| --- | --- |
+| `hyprland` | Workspaces, the active window, global binds, and compositor actions |
+| `gtk3`, `gtk-layer-shell`, `wayland` | The bar window, transparency, and input regions |
+| `xdg-desktop-portal-hyprland` | Every built-in keyboard shortcut |
+
+Building from source also needs the Flutter SDK and a Rust toolchain. The packaged routes do not.
+
+### Optional
+
+Everything else is per feature: `wireplumber` for audio, `grim` and `slurp` for screenshots, `hyprsunset` for night light, and so on. Each one enables a single control and nothing else, so skip any you do not want. The matching control is greyed out with a message naming what was not found.
+
+[Dependencies and capabilities](./dependencies) lists all twelve against the feature each one powers, how it is detected, and its Debian and RPM package names.
+
+## Choose an installation route
+
+The quick installer fetches the latest GitHub release and selects the native package for your distribution: DEB on Debian/Ubuntu, Pacman on Arch, RPM on Fedora/RHEL/openSUSE, and an AppImage fallback elsewhere. The Arch route is the repository’s maintained `PKGBUILD` template, while the Linux packages route builds the AppImage, DEB, RPM, and Pacman artifacts defined in this checkout. The source route is the quickest way to develop or try the current version.
+
+<InstallTabs />
+
+<div className="hyprDocNote">
+  <div>Note</div>
+  <p>Each <code>v*</code> tag runs formatting, generated-binding, Flutter, and Rust verification before building a GitHub release with checksummed packages attached. A tag name is a version. The installer resolves <code>latest</code> unless you pass <code>--version</code>, which takes the tag verbatim: <code>--version v0.1.0</code> installs that release and nothing newer.</p>
+</div>
+
+Before creating a tag, maintainers can exercise the AppImage path alone when iterating:
+
+```sh
+HYPRBARIC_RELEASE_JOBS=linux-appimage ./packaging/build-linux-packages --skip-clean
+```
+
+The command downloads and caches pinned AppImage tooling and its runtime, verifies both against their published SHA-256 digests, then packages only the selected job. Before publishing, build and verify every release format locally:
+
+```sh
+./packaging/build-linux-packages --skip-clean
+./packaging/verify-linux-packages
+```
+
+The verifier checks the exact versioned AppImage, DEB, RPM, and Pacman outputs, including package metadata, dependencies, launchers, file ownership and modes, and the AppImage structure. The release workflow runs the same gate before uploading any artifact.
+
+### Pinning or inspecting the installer
+
+The installer accepts `--version vX.Y.Z` when you want a specific release. Download it first if you would like to inspect the exact script before executing it:
+
+```sh title="terminal"
+curl --proto '=https' --tlsv1.2 -fLO https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh
+less install.sh
+sh install.sh --version vX.Y.Z
+```
+
+## Run it, then autostart it
+
+A source checkout runs under `flutter run -d linux`, and an installed package runs as `hyprbaric`. Either way, startup failures print to the terminal, so run it in the foreground once before moving it into `hyprland.conf`.
+
+```ini title="~/.config/hypr/hyprland.conf"
+# Start hyprbaric with the session.
+exec-once = hyprbaric
+```
+
+hyprbaric registers and reconciles its own enabled global shortcuts through the XDG portal and Hyprland. Configure them in **Settings → Keybinds** or TOML, and do not duplicate them as manual `hyprland.conf` binds. The [shortcuts guide](./shortcuts) describes the complete action list and conflict behavior.
+
+## Blur behind the bar
+
+hyprbaric names its layer surface `hyprbaric`, so a pair of Hyprland `layerrule` entries is all it takes:
+
+```ini title="~/.config/hypr/hyprland.conf"
+layerrule = blur on, match:namespace ^hyprbaric$
+layerrule = ignore_alpha 0.05, match:namespace ^hyprbaric$
+```
+
+The second rule is the one that matters. hyprbaric draws its panels inside a single layer surface that spans the whole output, because a dropdown needs room to open below the bar. Almost all of that surface is fully transparent, so `blur on` by itself blurs your entire screen. `ignore_alpha` tells Hyprland to skip pixels below the given alpha, which confines the effect to the bar and whatever panel is open.
+
+Keep the threshold well under the bar's own alpha. The `opacity` setting maps directly onto it, so at the default `77` the bar sits at `0.77` and at the minimum of `20` it sits at `0.20`. A threshold around `0.05` works across that whole range. On Hyprland versions before the `match:` syntax, the same rules are written `layerrule = blur, hyprbaric` and `layerrule = ignorealpha 0.05, hyprbaric`.
+
+## Where configuration lives
+
+There is nothing to create before the first run: with no file anywhere, every table falls back to its built-in defaults. Personal settings belong in `~/.config/hyprbaric/config.toml`, which is also where the settings window saves. [Configuration](./configuration) walks through creating it, and [Environment and files](./environment#configuration-file-precedence) lists every location that is searched and in what order.
+
+## Next steps
+
+<div className="hyprNextSteps">
+  <a href="./configuration">
+    <span>Configuration</span>
+    <strong>Shape the bar →</strong>
+    <p>Use the settings window or a focused TOML override for appearance, modules, workspaces, night light, and shortcuts.</p>
+  </a>
+  <a href="./configuration-reference">
+    <span>Reference</span>
+    <strong>See every field →</strong>
+    <p>Review defaults, valid values, and the TOML-only polling and discovery policies.</p>
+  </a>
+  <a href="./environment">
+    <span>Environment</span>
+    <strong>Tune the host →</strong>
+    <p>Environment variables, the files hyprbaric writes, capture destinations, and logging.</p>
+  </a>
+</div>

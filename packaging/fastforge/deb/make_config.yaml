@@ -1,0 +1,42 @@
+display_name: Hyprbaric
+package_name: hyprbaric
+maintainer:
+  name: Hyprbaric maintainers
+  email: fh@frederikhaaning.dk
+priority: optional
+section: x11
+installed_size: 52000
+essential: false
+icon: packaging/assets/hyprbaric.png
+metainfo: packaging/assets/hyprbaric.metainfo.xml
+generic_name: Hyprland Status Bar
+categories:
+  - System
+keywords:
+  - Hyprland
+  - Wayland
+  - Bar
+  - Status
+  - Panel
+startup_notify: false
+dependencies:
+  - hyprland
+  - "libgtk-3-0 | libgtk-3-0t64"
+  - libgtk-layer-shell0
+  - libwayland-client0
+  - xdg-desktop-portal-hyprland
+  - systemd
+recommended_dependencies:
+  - wireplumber
+  - network-manager
+  - grim
+  - slurp
+  - wl-clipboard
+  - hyprpicker
+  - wf-recorder
+  - hyprsunset
+  - ddcutil
+  - xdg-user-dirs
+  - libgtk-3-bin
+  - power-profiles-daemon
+  - upower

@@ -1,0 +1,105 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+real_bsdtar="${HYPRBARIC_REAL_BSDTAR:-/usr/bin/bsdtar}"
+normalize_ownership=false
+
+if [ ! -x "$real_bsdtar" ]; then
+  echo "bsdtar wrapper could not find the real bsdtar binary" >&2
+  exit 127
+fi
+
+if [ -d usr/share/applications ]; then
+  "$script_dir/desktop-entry-sanitize" usr/share/applications/*.desktop
+fi
+
+if [ -f .PKGINFO ]; then
+  normalize_ownership=true
+fi
+
+if [ -f .PKGINFO ] && grep -q '^pkgname=' .PKGINFO; then
+  package_name=$(sed -n 's/^pkgname=//p' .PKGINFO)
+  package_release=$(sed -n 's/^package_release:[[:space:]]*"\{0,1\}\([^"[:space:]]*\)"\{0,1\}$/\1/p' \
+    "$script_dir/../fastforge/pacman/make_config.yaml")
+  package_release=${package_release:-1}
+  installed_size=$(du -sb usr opt | awk '{ total += $1 } END { print total }')
+  build_date=$(date +%s)
+  pkginfo=$(mktemp .PKGINFO.XXXXXX)
+
+  awk \
+    -v build_date="$build_date" \
+    -v installed_size="$installed_size" \
+    -v package_release="$package_release" '
+      function trim(value) {
+        sub(/^[[:space:]]+/, "", value)
+        sub(/[[:space:]]+$/, "", value)
+        return value
+      }
+
+      function emit_list(name, value, entries, count, entry_index) {
+        sub(/^\(/, "", value)
+        sub(/\)$/, "", value)
+        count = split(value, entries, /,[[:space:]]*/)
+
+        for (entry_index = 1; entry_index <= count; entry_index++) {
+          if (trim(entries[entry_index]) != "") {
+            print name " = " trim(entries[entry_index])
+          }
+        }
+      }
+
+      {
+        separator = index($0, "=")
+        name = trim(substr($0, 1, separator - 1))
+        value = trim(substr($0, separator + 1))
+
+        if (name == "pkgver") {
+          print "pkgver = " value "-" package_release
+        } else if (name == "size") {
+          print "size = " installed_size
+        } else if (name == "license") {
+          emit_list("license", value)
+        } else if (name == "groups") {
+          emit_list("group", value)
+        } else if (name == "arch") {
+          emit_list("arch", value)
+        } else if (name == "depends") {
+          emit_list("depend", value)
+        } else if (name == "optdepends") {
+          emit_list("optdepend", value)
+        } else if (name == "conflicts") {
+          emit_list("conflict", value)
+        } else if (name == "replaces" || name == "provides") {
+          emit_list(name, value)
+        } else if (name != "options") {
+          print name " = " value
+        }
+      }
+
+      END {
+        print "builddate = " build_date
+      }
+    ' .PKGINFO >"$pkginfo"
+
+  mv "$pkginfo" .PKGINFO
+  mkdir -p usr/bin
+  launcher="usr/bin/$package_name"
+  printf '#!/bin/sh\nexec "/opt/%s/%s" "$@"\n' \
+    "$package_name" "$package_name" >"$launcher"
+  chmod 0755 "$launcher"
+
+  sed -i \
+    -e '\#^[[:space:]]*ln -s /opt/[^ ]*/[^ ]* /usr/bin/[^ ]*$#d' \
+    -e '\#^[[:space:]]*chmod +x /usr/bin/[^ ]*$#d' \
+    -e '\#^[[:space:]]*rm /usr/bin/[^ ]*$#d' \
+    -e '/^post_install() {$/a\	:' \
+    -e '/^post_remove() {$/a\	:' \
+    .INSTALL
+fi
+
+if [ "$normalize_ownership" = true ]; then
+  exec "$real_bsdtar" --uid 0 --gid 0 --uname root --gname root "$@"
+fi
+
+exec "$real_bsdtar" "$@"

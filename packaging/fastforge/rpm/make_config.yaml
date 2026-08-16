@@ -1,0 +1,29 @@
+display_name: Hyprbaric
+summary: Flutter-based status bar tailored for Hyprland on Linux
+group: User Interface/Desktops
+vendor: Hyprbaric
+packager: Hyprbaric maintainers
+packagerEmail: fh@frederikhaaning.dk
+license: AGPL-3.0-only
+url: https://github.com/asaphaaning/Hyprbaric
+build_arch: x86_64
+icon: packaging/assets/hyprbaric.png
+metainfo: packaging/assets/hyprbaric.metainfo.xml
+generic_name: Hyprland Status Bar
+categories:
+  - System
+keywords:
+  - Hyprland
+  - Wayland
+  - Bar
+  - Status
+  - Panel
+startup_notify: false
+requires:
+  - hyprland
+  - gtk3
+  - gtk-layer-shell
+  - libwayland-client
+  - xdg-desktop-portal-hyprland
+  - systemd
+description: Hyprbaric is a Linux-only Flutter status bar for Hyprland with a Rust runtime for compositor, portal, tray, audio, display, notification, and capture integrations.

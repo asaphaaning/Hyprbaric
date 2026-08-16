@@ -1,0 +1,40 @@
+---
+sidebar_position: 4
+title: Settings window
+description: What each tab of hyprbaric’s settings window writes, and the behaviour that is not visible from the window itself.
+kicker: Configure hyprbaric
+---
+
+The settings window is the interactive half of hyprbaric’s configuration. Open it from the bar menu or with **Bar settings** (`Super + Shift + C`).
+
+Five tabs map onto a TOML table each, and a sixth, **About**, reports the build and the host capabilities it detected. [Configuration surfaces](./configuration-reference#configuration-surfaces) pairs every tab with the table it writes, and the rest of that page gives the accepted values and defaults. This page covers only what the window decides on top of that.
+
+## Appearance
+
+**Restore defaults** rewrites all four appearance keys, not only the one you last changed.
+
+Changing the position moves the layer-shell exclusive zone, so Hyprland reflows tiled windows around the new edge.
+
+## Modules
+
+Hiding a module removes it from the bar and nothing else. The backing service keeps running, so its global shortcuts continue to work and notifications are still recorded while the indicator is hidden.
+
+## Display
+
+Night light needs `hyprsunset` and `hyprctl` on `PATH`. Without them the tab reports the capability as unavailable, and the state you set is still persisted for the next launch.
+
+Temperature is committed explicitly rather than on change, and `0` is rejected in place with `Temperature must be above 0K` instead of being written.
+
+Display brightness is not configured here. It is adjusted from the Audio & Display popup or the brightness shortcuts, and its polling and DDC policy is TOML-only, in [`[brightness]`](./configuration-reference#runtime-policy).
+
+## Keybinds
+
+- **Record** writes the captured chord to the action’s table.
+- **Disable** writes `state = "disabled"`. The action keeps working in the bar and loses only its hotkey.
+- **Reset** removes the action’s table, so the built-in default applies again.
+
+See [Shortcuts](./shortcuts) for the action list, the defaults, and what happens when a chord is already taken.
+
+## What the window does not cover
+
+The TOML-only runtime cadences have no GUI equivalent, and neither does session-only state such as do-not-disturb, caffeine, and volume. [Not configurable in TOML](./configuration-reference#not-configurable-in-toml) draws the whole boundary.

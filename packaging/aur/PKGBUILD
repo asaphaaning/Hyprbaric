@@ -1,0 +1,76 @@
+# Maintainer: Frederik Haaning <fh@frederikhaaning.dk>
+
+pkgname=hyprbaric
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Flutter-based status bar tailored for Hyprland on Linux'
+arch=('x86_64')
+url='https://github.com/asaphaaning/Hyprbaric'
+license=('AGPL-3.0-only')
+depends=(
+  'hyprland'
+  'gtk3'
+  'gtk-layer-shell'
+  'wayland'
+  'xdg-desktop-portal-hyprland'
+  'systemd'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'cmake'
+  'flutter'
+  'ninja'
+  'pkgconf'
+  'rust'
+)
+optdepends=(
+  'wireplumber: PipeWire audio volume and mute controls'
+  'ddcutil: external display brightness controls'
+  'networkmanager: Wi-Fi status and controls'
+  'grim: screenshot capture'
+  'slurp: screenshot and recording region selection'
+  'wl-clipboard: copying screenshots and picked colors'
+  'hyprpicker: color picker'
+  'wf-recorder: screen recording'
+  'hyprsunset: Night light'
+  'xdg-user-dirs: user directory resolution'
+  'power-profiles-daemon: power profile controls'
+  'upower: power status'
+)
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "Hyprbaric-${pkgver}"
+  flutter pub get
+  cargo fetch --locked
+  flutter build linux --release
+}
+
+check() {
+  cd "Hyprbaric-${pkgver}"
+  flutter test
+  cargo test --manifest-path native/hyprbaric/Cargo.toml -- --test-threads=1
+  cargo test --manifest-path native/hub/Cargo.toml
+}
+
+package() {
+  cd "Hyprbaric-${pkgver}"
+
+  install -dm755 "${pkgdir}/usr/lib/${pkgname}"
+  cp -a build/linux/x64/release/bundle/. "${pkgdir}/usr/lib/${pkgname}/"
+
+  install -dm755 "${pkgdir}/usr/bin"
+  ln -s "/usr/lib/${pkgname}/${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+
+  install -Dm644 packaging/assets/com.hyprbaric.Hyprbaric.desktop \
+    "${pkgdir}/usr/share/applications/com.hyprbaric.Hyprbaric.desktop"
+  install -Dm644 packaging/assets/hyprbaric.png \
+    "${pkgdir}/usr/share/icons/hicolor/256x256/apps/hyprbaric.png"
+  install -Dm644 packaging/assets/hyprbaric.svg \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/hyprbaric.svg"
+  install -Dm644 packaging/assets/hyprbaric.metainfo.xml \
+    "${pkgdir}/usr/share/metainfo/hyprbaric.metainfo.xml"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

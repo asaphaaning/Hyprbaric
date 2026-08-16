@@ -1,0 +1,23 @@
+[package]
+name = "hub"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[lib]
+# `lib` is required for non-library targets,
+# such as tests and benchmarks.
+# `cdylib` is for Linux, Android, Windows, and web.
+# `staticlib` is for iOS and macOS.
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+rinf = "8.10.0"
+hyprbaric = { path = "../hyprbaric" }
+
+# Uncomment below to target the web.
+# tokio_with_wasm = { version = "0.8.5", features = ["rt", "macros", "time"] }
+# wasm-bindgen = "0.2.100"

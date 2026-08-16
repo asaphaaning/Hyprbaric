@@ -1,0 +1,64 @@
+---
+sidebar_position: 2
+title: Configuration
+description: Find hyprbaric’s TOML file and shape the bar around your session.
+kicker: Configure hyprbaric
+---
+
+hyprbaric starts with useful defaults. You can configure it two ways: use the **Settings** window for the everyday controls, or edit TOML for the complete configuration surface. Both routes write the same user configuration file, so you can freely move between them.
+
+Open **Settings** from the bar menu or with the **Bar settings** shortcut (`Super + Shift + C`). Changes made there are applied immediately and persisted to `config.toml`. Manual TOML changes take effect after restarting hyprbaric.
+
+The GUI covers what most people change regularly, across five tabs that map onto TOML tables one for one. The [Settings window](./settings-window) walkthrough documents every control and the table each tab writes. Runtime tuning such as network polling, brightness discovery, and power refresh cadence has no GUI control and is TOML only.
+
+## Create your config file
+
+For a personal setup, write to `~/.config/hyprbaric/config.toml`:
+
+```bash title="terminal"
+mkdir -p ~/.config/hyprbaric
+$EDITOR ~/.config/hyprbaric/config.toml
+```
+
+That is also where the settings window saves, even when the file it loaded came from a system directory, so machine-wide defaults in `/etc/xdg` survive your edits. [Environment and files](./environment#configuration-file-precedence) lists the full search order.
+
+## A practical starting point
+
+Every table is defaulted independently, so an override only needs the keys you care about. This one moves the bar to the bottom, hides the tray, switches workspace labels to numerals, and runs night light overnight.
+
+```toml title="config.toml"
+[appearance]
+position = "bottom"
+opacity = 88
+corner_radius = 16
+accent_hue = 197
+
+[modules.system_tray]
+enabled = false
+
+[workspaces]
+indicator_style = "numeric"
+visible_range = "large"
+
+[night_light]
+temperature = 3200
+
+[schedules.night_light]
+enabled = true
+start_hour = 21
+stop_hour = 7
+```
+
+Dropping every line but `[workspaces] visible_range = "large"` would still leave that table's `indicator_style = "roman"` and `clickable = true` in place.
+
+Nine tables make up the entire TOML surface. [Configuration surfaces](./configuration-reference#configuration-surfaces) lists them against what each one controls and which settings tab manages it, and the rest of that page covers every key, value, and default.
+
+## What is configured outside TOML
+
+Plenty of behavior is shaped by the host instead: environment variables, capture destinations, session-only state such as do-not-disturb and volume, and which features are available at all. [Not configurable in TOML](./configuration-reference#not-configurable-in-toml) lists each one against where it does live.
+
+## When a value is rejected
+
+Values are checked while the file loads. A file that parses as TOML but holds an out-of-range value stops startup and is logged with its path, rather than falling back to defaults, so check the log when a change appears to have been ignored. An unknown table or key is ignored instead.
+
+[Validation](./configuration-reference#validation) lists every constraint with accepted and rejected examples.

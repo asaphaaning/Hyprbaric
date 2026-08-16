@@ -1,0 +1,74 @@
+include: package:flutter_lints/flutter.yaml
+
+plugins:
+  riverpod_lint: ^3.0.0
+
+analyzer:
+  exclude:
+    - 'compass_app/**'
+    - '**/*.g.dart'
+    - 'lib/src/bindings/**'
+    - 'lib/src/native/**'
+    - 'lib/example/**'
+    - 'linux/**'
+    - 'pigeons/**'
+    - 'build/**'
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+  errors:
+    discarded_futures: warning
+    unawaited_futures: warning
+
+linter:
+  rules:
+    always_declare_return_types: true
+    avoid_dynamic_calls: true
+    avoid_positional_boolean_parameters: true
+    avoid_print: true
+    avoid_relative_lib_imports: true
+    avoid_slow_async_io: true
+    avoid_type_to_string: true
+    avoid_void_async: true
+    cancel_subscriptions: true
+    close_sinks: true
+    collection_methods_unrelated_type: true
+    combinators_ordering: true
+    directives_ordering: true
+    discarded_futures: true
+    exhaustive_cases: true
+    implicit_call_tearoffs: true
+    invalid_case_patterns: true
+    flutter_style_todos: true
+    matching_super_parameters: true
+    no_adjacent_strings_in_list: true
+    no_duplicate_case_values: true
+    no_runtimeType_toString: true
+    no_self_assignments: true
+    no_wildcard_variable_uses: true
+    only_throw_errors: true
+    prefer_asserts_with_message: true
+    prefer_const_constructors: true
+    prefer_constructors_over_static_methods: true
+    prefer_final_fields: true
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
+    prefer_null_aware_method_calls: true
+    prefer_void_to_null: true
+    require_trailing_commas: true
+    sort_pub_dependencies: true
+    unnecessary_await_in_return: true
+    unnecessary_breaks: true
+    unnecessary_underscores: true
+    unnecessary_lambdas: true
+    unnecessary_library_directive: true
+    unnecessary_parenthesis: true
+    unnecessary_raw_strings: true
+    unawaited_futures: true
+    use_build_context_synchronously: true
+    use_enums: true
+    use_named_constants: true
+    use_null_aware_elements: true
+    use_to_and_as_if_applicable: true

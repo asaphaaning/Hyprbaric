@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Hyprbaric
+GenericName=Hyprland Status Bar
+Comment=Flutter-based status bar tailored for Hyprland on Linux.
+Exec=hyprbaric
+Icon=hyprbaric
+Terminal=false
+Categories=System;
+Keywords=Hyprland;Wayland;Bar;Status;Panel;
+StartupNotify=false

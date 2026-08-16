@@ -1,0 +1,63 @@
+---
+sidebar_position: 7
+title: Dependencies and capabilities
+description: Every capability hyprbaric probes at startup, what it powers, and the packages that provide it.
+hide_lead: true
+kicker: Reference
+---
+
+hyprbaric probes its host at startup and reports the result in **Settings → About → System**. Nothing here is configured in TOML. Installing or removing a backend is what changes a capability. Even so, the same catalog decides which controls are live, which are greyed out, and what a failure message says.
+
+Capabilities fall into three tiers:
+
+- **Core**: required for the bar to run at all. A missing core capability is a packaging error.
+- **Service**: session services hyprbaric integrates with. A missing service leaves that integration pending or unavailable without affecting the rest of the bar.
+- **Optional**: per-feature backends. A missing optional backend greys out only its own feature.
+
+A capability reports **Ready** when every probe passes, **Missing** when an optional capability fails or a single probe fails, and **Partial** when a core or service capability fails more than one probe. The message names exactly what was not found: a command, a filesystem path, or an environment variable.
+
+## Core
+
+| Capability | Powers | Probed by | Arch | Debian / Ubuntu | RPM |
+| --- | --- | --- | --- | --- | --- |
+| Hyprland session | Workspaces, active window, global binds, compositor actions | `hyprctl` on `PATH`, `HYPRLAND_INSTANCE_SIGNATURE` set | `hyprland` | `hyprland` | `hyprland` |
+| GTK layer shell | Bar window, transparency, input regions | Always available (linked into the runner) | `gtk3`, `gtk-layer-shell`, `wayland` | `libgtk-3-0` or `libgtk-3-0t64`, `libgtk-layer-shell0`, `libwayland-client0` | `gtk3`, `gtk-layer-shell`, `libwayland-client` |
+
+## Service
+
+| Capability | Powers | Probed by | Arch | Debian / Ubuntu | RPM |
+| --- | --- | --- | --- | --- | --- |
+| Global shortcuts portal | All built-in hotkeys | `hyprctl` on `PATH`, plus one of `/usr/share/xdg-desktop-portal/portals/hyprland.portal`, `/usr/lib/xdg-desktop-portal-hyprland`, `/usr/libexec/xdg-desktop-portal-hyprland` | `xdg-desktop-portal-hyprland` | `xdg-desktop-portal-hyprland` | `xdg-desktop-portal-hyprland` |
+
+## Optional
+
+| Capability | Powers | Probed by | Arch | Debian / Ubuntu | RPM |
+| --- | --- | --- | --- | --- | --- |
+| Audio controls | Volume, mute, audio devices | `wpctl` | `wireplumber` | `wireplumber` | `wireplumber` |
+| Brightness controls | Backlight and external display brightness | A device in `/sys/class/backlight`, or `ddcutil` | `ddcutil` | `ddcutil` | `ddcutil` |
+| NetworkManager | Wi-Fi status, scanning, connections | `/run/NetworkManager` or `/var/run/NetworkManager` | `networkmanager` | `network-manager` | `NetworkManager` |
+| Desktop notifications | Notification center, do-not-disturb | Always available | — | — | — |
+| StatusNotifier tray | System tray items and menus | Always available | — | — | — |
+| App launching | Desktop entry discovery and launch | `gtk-launch` | `gtk3` | `libgtk-3-bin` | `gtk3` |
+| Screenshots | Region, window, and full-screen capture | `grimblast` or `grim`, plus `slurp` | `grim`, `slurp` | `grim`, `slurp` | `grim`, `slurp` |
+| Clipboard | Copying captures and picked colors | `wl-copy` | `wl-clipboard` | `wl-clipboard` | `wl-clipboard` |
+| Color picker | Screen color sampling | `hyprpicker` | `hyprpicker` | `hyprpicker` | `hyprpicker` |
+| Screen recording | Region recording | `wf-recorder` and `slurp` | `wf-recorder`, `slurp` | `wf-recorder`, `slurp` | `wf-recorder`, `slurp` |
+| Night light | Screen temperature and its schedule | `hyprctl` and `hyprsunset` | `hyprsunset` | `hyprsunset` | `hyprsunset` |
+| Caffeine | Sleep and idle inhibition | `/run/systemd/system` present | `systemd` | `systemd` | `systemd` |
+| Power actions | Battery, power profiles, session actions | `/run/systemd/system` present | `systemd`, `power-profiles-daemon`, `upower` | `systemd`, `power-profiles-daemon`, `upower` | `systemd`, `power-profiles-daemon`, `upower` |
+| XDG user directories | Screenshot and recording destinations | `xdg-user-dir` | `xdg-user-dirs` | `xdg-user-dirs` | `xdg-user-dirs` |
+
+## Notes on individual capabilities
+
+**Brightness** needs no package on a laptop with a kernel backlight device. `ddcutil` is only required for external DDC/CI monitors, and its discovery and write policy is tuned in [`[brightness]`](./configuration-reference#runtime-policy).
+
+**Screenshots** prefer `grimblast` when it is installed and fall back to `grim`. `slurp` is required either way, because region selection goes through it.
+
+**Notifications** and **System tray** are always reported as available because hyprbaric hosts them itself over D-Bus. If the panel stays empty, the cause is on the session bus rather than in a missing package.
+
+**XDG user directories** only affects *where* captures are written. Without `xdg-user-dir`, captures fall back to `~/Pictures/Screenshots` and `~/Videos/Recordings`.
+
+## Packaging policy
+
+The packaging source of truth is [`packaging/runtime_capabilities.yaml`](https://github.com/asaphaaning/Hyprbaric/blob/master/packaging/runtime_capabilities.yaml). The Rust runtime mirrors that contract when it probes the host. Packages should install core and service dependencies as hard dependencies and leave optional backends as recommended or optional metadata, so a lean install is possible and features can be added later.

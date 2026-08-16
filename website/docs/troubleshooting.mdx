@@ -1,0 +1,107 @@
+---
+sidebar_position: 8
+title: Troubleshooting
+description: Read hyprbaric's logs, raise the log level, and run a debug build when something misbehaves.
+kicker: Reference
+---
+
+When something does not work, hyprbaric has already written down why. This page covers where that output goes, how to ask for more of it, and how to run a debug build.
+
+## Where the logs go
+
+hyprbaric logs through `tracing` and writes every event to two places at once:
+
+- **Standard output**, in a compact human-readable format. Started from `exec-once`, that output belongs to Hyprland, so it lands in the Hyprland log rather than in a terminal you can see.
+- **The systemd journal**, whenever journald is reachable. This is the reliable route for a bar that starts with your session.
+
+If the journal cannot be reached, hyprbaric keeps running and logs a single `Failed to install journald tracing layer` warning to standard output.
+
+```bash title="terminal"
+# Follow the log live
+journalctl --user -t hyprbaric -f
+
+# Everything from the current boot
+journalctl --user -t hyprbaric -b
+
+# The last ten minutes, oldest first
+journalctl --user -t hyprbaric --since "10 min ago"
+```
+
+The `hyprbaric` identifier comes from the executable name, so it is the same whether you run an installed package or a build from source. If `--user` returns nothing, drop it and query the system journal instead.
+
+## Raising the log level
+
+The default filter is `info`. `RUST_LOG` takes the usual `tracing` directives, and a per-module target is almost always better than turning everything up:
+
+```bash title="terminal"
+# Everything, one run
+RUST_LOG=debug hyprbaric
+
+# One subsystem in detail, the rest left alone
+RUST_LOG=hyprbaric::shortcuts=trace,info hyprbaric
+RUST_LOG=hyprbaric::network=debug,info hyprbaric
+```
+
+Module targets follow the source layout: `hyprbaric::network`, `hyprbaric::brightness`, `hyprbaric::power`, `hyprbaric::shortcuts`, `hyprbaric::tray`, `hyprbaric::notifications`, `hyprbaric::hyprland`, `hyprbaric::portals`, `hyprbaric::capabilities`, and so on.
+
+### Levels are renamed on the way into the journal
+
+journald has its own priority scale, and the mapping is not one for one. This matters as soon as you filter with `journalctl -p`:
+
+| hyprbaric level | journald priority |
+| --- | --- |
+| `ERROR` | `err` (3) |
+| `WARN` | `warning` (4) |
+| `INFO` | `notice` (5) |
+| `DEBUG` | `info` (6) |
+| `TRACE` | `debug` (7) |
+
+So `journalctl -p notice` is what shows hyprbaric's ordinary `INFO` output, and `journalctl -p info` already includes its `DEBUG` lines. Filtering by `RUST_LOG` at startup is more predictable than filtering the journal after the fact.
+
+### Structured output
+
+`HYPRBARIC_LOG=json` switches the standard-output format to one JSON object per event, which is what you want when piping logs somewhere else. `RUST_LOG_STYLE=never` drops the ANSI colors from the compact format.
+
+```bash title="terminal"
+HYPRBARIC_LOG=json RUST_LOG_STYLE=never hyprbaric
+```
+
+## Finding out which config file loaded
+
+hyprbaric loads the first file it finds and ignores the rest, so an edit that appears to do nothing usually means a different file won. The loader logs the winning path at `INFO`, but the path is a structured field rather than part of the message, so `journalctl` does not print it by default:
+
+```bash title="terminal"
+journalctl --user -t hyprbaric MESSAGE="Loaded Hyprbaric config" -o verbose | grep F_PATH
+```
+
+```text title="output"
+F_PATH=/home/haaning/.config/hyprbaric/config.toml
+```
+
+`tracing-journald` prefixes every field it did not originate with `F_`, which is where the `F_` in `F_PATH` comes from. On standard output no such step applies and the path is printed inline after the message. Expect the line more than once per session: the shortcut settings reload the configuration whenever the **Keybinds** tab reads or saves, and each load logs again.
+
+No such line means no file was found anywhere and the built-in defaults are in use. That case is logged at `DEBUG`, so `RUST_LOG=debug` will show it explicitly. [Configuration file precedence](./environment#configuration-file-precedence) lists the full search order.
+
+A file that parses as TOML but holds an out-of-range value stops startup instead of falling back to defaults, and the failure names the offending path. See [Validation](./configuration-reference#validation) for the constraints and what a rejected value looks like.
+
+## A control is greyed out
+
+That is the capability probe reporting a missing backend rather than a fault. **Settings → About → System** lists every capability and its current state, and the disabled control itself names what was not found. [Dependencies and capabilities](./dependencies) maps each one to the package that provides it.
+
+## Running a debug build
+
+A source checkout gives you the Flutter tooling on top of the Rust logs:
+
+```bash title="terminal"
+flutter run -d linux
+```
+
+That build prints Dart errors and stack traces to the terminal, supports hot reload with `r`, and exposes the usual Flutter DevTools connection. Rust logging works the same way, so `RUST_LOG=debug flutter run -d linux` turns up both halves at once.
+
+To trace the signals crossing between Dart and Rust, compile with the signal log enabled:
+
+```bash title="terminal"
+flutter run -d linux --dart-define=HYPRBARIC_SIGNAL_LOG=true
+```
+
+Each dispatched command is then printed with its label, and a signal that fails to send prints its stack trace rather than being swallowed. This is a compile-time flag rather than an environment variable, so it has no effect on an already-built binary and no cost in a release build.

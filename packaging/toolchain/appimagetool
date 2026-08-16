@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+runtime_file=${HYPRBARIC_APPIMAGE_RUNTIME:?HYPRBARIC_APPIMAGE_RUNTIME is required}
+real_appimagetool=${HYPRBARIC_REAL_APPIMAGETOOL:?HYPRBARIC_REAL_APPIMAGETOOL is required}
+
+[ -s "$runtime_file" ] || {
+  echo "AppImage runtime was not found at $runtime_file." >&2
+  exit 1
+}
+
+exec "$real_appimagetool" --runtime-file "$runtime_file" "$@"

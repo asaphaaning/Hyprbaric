@@ -1,0 +1,72 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repo_root"
+
+app_name=$(sed -n 's/^name:[[:space:]]*//p' pubspec.yaml)
+package_version=$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml)
+package_dir="dist/$package_version"
+
+appimage="$package_dir/$app_name-$package_version-linux.AppImage"
+deb="$package_dir/$app_name-$package_version-linux.deb"
+rpm_package="$package_dir/$app_name-$package_version-linux.rpm"
+pacman="$package_dir/$app_name-$package_version-linux.pkg.tar.xz"
+
+for artifact in "$appimage" "$deb" "$rpm_package" "$pacman"; do
+  test -s "$artifact"
+done
+
+require_line() {
+  content=$1
+  expected=$2
+
+  printf '%s\n' "$content" | grep --fixed-strings --line-regexp --quiet "$expected"
+}
+
+expected_opt_launcher=$(printf '#!/bin/sh\nexec "/opt/%s/%s" "$@"' "$app_name" "$app_name")
+expected_rpm_launcher=$(printf '#!/bin/sh\nexec "/usr/share/%s/%s" "$@"' "$app_name" "$app_name")
+
+test -x "$appimage"
+appimage_offset=$("$appimage" --appimage-offset)
+test "$appimage_offset" -gt 0
+
+test "$(dpkg-deb --field "$deb" Package)" = "$app_name"
+test "$(dpkg-deb --field "$deb" Version)" = "$package_version"
+deb_dependencies=$(dpkg-deb --field "$deb" Depends)
+require_line "$deb_dependencies" \
+  'hyprland, libgtk-3-0 | libgtk-3-0t64, libgtk-layer-shell0, libwayland-client0, xdg-desktop-portal-hyprland, systemd'
+deb_launcher=$(dpkg-deb --fsys-tarfile "$deb" | bsdtar -xOf - "./usr/bin/$app_name")
+test "$deb_launcher" = "$expected_opt_launcher"
+
+test "$(rpm --query --package --qf '%{NAME}' "$rpm_package")" = "$app_name"
+test "$(rpm --query --package --qf '%{VERSION}' "$rpm_package")" = "$package_version"
+rpm_dependencies=$(rpm --query --package --requires "$rpm_package")
+require_line "$rpm_dependencies" libwayland-client
+rpm_files=$(rpm --query --package --list --verbose "$rpm_package")
+printf '%s\n' "$rpm_files" | awk '$1 == "-rwxr-xr-x" && $NF == "/usr/bin/hyprbaric" { found = 1 } END { exit !found }'
+printf '%s\n' "$rpm_files" | awk '$1 == "-rw-r--r--" && $NF == "/usr/share/pixmaps/hyprbaric.png" { found = 1 } END { exit !found }'
+rpm_launcher=$(rpm2cpio "$rpm_package" | bsdtar -xOf - "./usr/bin/$app_name")
+test "$rpm_launcher" = "$expected_rpm_launcher"
+
+pacman_info=$(bsdtar -xOf "$pacman" .PKGINFO)
+require_line "$pacman_info" "pkgname = $app_name"
+require_line "$pacman_info" "pkgver = $package_version-1"
+require_line "$pacman_info" 'depend = hyprland'
+require_line "$pacman_info" 'depend = gtk3'
+require_line "$pacman_info" 'depend = gtk-layer-shell'
+require_line "$pacman_info" 'depend = wayland'
+require_line "$pacman_info" 'depend = xdg-desktop-portal-hyprland'
+require_line "$pacman_info" 'depend = systemd'
+if printf '%s\n' "$pacman_info" | grep --line-regexp --quiet 'depends=.*'; then
+  echo "Pacman metadata contains Fastforge's invalid depends=(...) syntax." >&2
+  exit 1
+fi
+pacman_files=$(bsdtar -tvf "$pacman")
+printf '%s\n' "$pacman_files" | awk '$1 == "-rwxr-xr-x" && $NF == "usr/bin/hyprbaric" { found = 1 } END { exit !found }'
+printf '%s\n' "$pacman_files" | awk '$3 != "root" || $4 != "root" { exit 1 }'
+pacman_launcher=$(bsdtar -xOf "$pacman" "usr/bin/$app_name")
+test "$pacman_launcher" = "$expected_opt_launcher"
+
+printf 'Verified AppImage, DEB, RPM, and Pacman packages for %s.\n' "$package_version"

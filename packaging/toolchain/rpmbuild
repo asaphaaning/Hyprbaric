@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+set -eu
+
+real_rpmbuild="${HYPRBARIC_REAL_RPMBUILD:-/usr/bin/rpmbuild}"
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+if [ ! -x "$real_rpmbuild" ]; then
+  echo "rpmbuild wrapper could not find the real rpmbuild binary" >&2
+  exit 127
+fi
+
+for arg in "$@"; do
+  case "$arg" in
+    *.spec)
+      if [ -f "$arg" ]; then
+        rpmbuild_dir=$(CDPATH= cd -- "$(dirname -- "$arg")/.." && pwd)
+        package_name=$(sed -n 's/^Name:[[:space:]]*//p' "$arg")
+        [ -n "$package_name" ] || {
+          echo "rpmbuild wrapper could not determine the package name" >&2
+          exit 1
+        }
+
+        launcher="$rpmbuild_dir/BUILD/$package_name-launcher"
+        printf '#!/bin/sh\nexec "/usr/share/%s/%s" "$@"\n' \
+          "$package_name" "$package_name" >"$launcher"
+        chmod 0755 "$launcher"
+
+        sed -i \
+          -e 's#^cp -r [^ ]*/\* #cp -r %{_topdir}/BUILD/%{name}/* #' \
+          -e 's#^cp -r [^ ]*\.desktop #cp -r %{_topdir}/BUILD/%{name}.desktop #' \
+          -e 's#^cp -r [^ ]*\.png #cp -r %{_topdir}/BUILD/%{name}.png #' \
+          -e 's#^cp -r [^ ]*\.xml #cp -r %{_topdir}/BUILD/%{name}*.xml #' \
+          -e 's#^ln -s %{_datadir}/%{name}/[^ ]* #install -m 0755 %{_topdir}/BUILD/%{name}-launcher #' \
+          -e 's#^%attr(4755, root, root) %{_datadir}/pixmaps/#%attr(0644, root, root) %{_datadir}/pixmaps/#' \
+          "$arg"
+        if [ -d "$rpmbuild_dir/BUILD" ]; then
+          "$script_dir/desktop-entry-sanitize" "$rpmbuild_dir"/BUILD/*.desktop
+        fi
+      fi
+      ;;
+  esac
+done
+
+exec "$real_rpmbuild" --define '_dbpath %{_topdir}/rpmdb' "$@"

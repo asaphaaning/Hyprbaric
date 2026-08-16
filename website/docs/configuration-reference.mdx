@@ -1,0 +1,253 @@
+---
+sidebar_position: 3
+title: Configuration reference
+description: Every supported hyprbaric TOML table, value, built-in default, and settings-window equivalent.
+hide_lead: true
+kicker: Configuration reference
+---
+
+This is the complete configuration surface read by hyprbaric. Every table and field is optional: an omitted value keeps its built-in default. The settings window writes the same user `config.toml` for the controls it manages. TOML additionally exposes runtime policy.
+
+## Configuration surfaces
+
+| Top-level table | Purpose | Managed in Settings |
+| --- | --- | --- |
+| `[appearance]` | Bar placement and visual treatment. | Appearance |
+| `[modules.*]` | Which modules are shown on the bar. | Modules |
+| `[workspaces]` | Workspace indicator presentation and interaction. | Workspaces |
+| `[night_light]` | Desired night light state and temperature. | Display |
+| `[schedules.night_light]` | Daily night light time window. | Display |
+| `[shortcuts.*]` | Built-in global action bindings. | Keybinds |
+| `[network]` | NetworkManager and traffic refresh cadence. | No |
+| `[brightness]` | Backlight polling and DDC discovery/write policy. | No |
+| `[power]` | Battery and power-profile refresh cadence. | No |
+
+Nothing outside these nine tables is read from `config.toml`. An unknown table or key is ignored. A known key with an invalid value stops startup and is logged with the offending path.
+
+For file locations, precedence, and when changes are applied, see [Configuration](./configuration). For the environment variables, capture destinations, and host capabilities that are configured outside TOML, see [Environment and files](./environment) and [Dependencies and capabilities](./dependencies).
+
+## Appearance
+
+The **Appearance** tab applies changes live and can restore these values to their defaults.
+
+```toml title="config.toml"
+[appearance]
+position = "top"
+opacity = 77
+corner_radius = 12
+accent_hue = 197
+```
+
+| Key | Values | Default | Effect |
+| --- | --- | --- | --- |
+| `position` | `"top"`, `"bottom"` | `"top"` | Edge where hyprbaric reserves space and renders. |
+| `opacity` | Integer `20..=100` | `77` | Bar background opacity in percent. |
+| `corner_radius` | Integer `0..=32` | `12` | Radius of the bar’s outer corners, in pixels. |
+| `accent_hue` | Integer `0..=359` | `197` | Hue used for highlights and active states. |
+
+## Modules
+
+The **Modules** tab controls which modules appear on the bar. Hiding one does not stop its backing service, as [Settings window](./settings-window#modules) describes.
+
+```toml title="config.toml"
+[modules.active_window_title]
+enabled = true
+
+[modules.system_tray]
+enabled = true
+
+[modules.notifications]
+enabled = true
+
+[modules.audio_display]
+enabled = true
+```
+
+| Table | Key | Default | Effect |
+| --- | --- | --- | --- |
+| `[modules.active_window_title]` | `enabled` | `true` | Shows the focused app and document title. |
+| `[modules.system_tray]` | `enabled` | `true` | Shows StatusNotifier tray items. |
+| `[modules.notifications]` | `enabled` | `true` | Shows the notification indicator and center entry point. |
+| `[modules.audio_display]` | `enabled` | `true` | Shows the Audio & Display popup anchor. |
+
+## Workspaces
+
+The **Workspaces** tab manages all workspace-indicator settings.
+
+```toml title="config.toml"
+[workspaces]
+indicator_style = "roman"
+clickable = true
+visible_range = "medium"
+```
+
+| Key | Values | Default | Effect |
+| --- | --- | --- | --- |
+| `indicator_style` | `"roman"`, `"numeric"` | `"roman"` | Renders workspace IDs as Roman numerals or digits. |
+| `clickable` | Boolean | `true` | Allows direct clicks on an indicator to switch workspace. Previous/next controls stay available. |
+| `visible_range` | `"small"` (5), `"medium"` (7), `"large"` (9) | `"medium"` | Number of workspace indicators kept visible around the active workspace. |
+
+## Display: Night light and schedule
+
+The **Display** tab manages night light and its local-time schedule. `hyprsunset` must be available for the filter to be applied.
+
+```toml title="config.toml"
+[night_light]
+enabled = false
+temperature = 3500
+
+[schedules.night_light]
+enabled = false
+start_hour = 21
+stop_hour = 7
+```
+
+| Table | Key | Values | Default | Effect |
+| --- | --- | --- | --- | --- |
+| `[night_light]` | `enabled` | Boolean | `false` | Restores the configured filter state at launch. |
+| `[night_light]` | `temperature` | Non-zero Kelvin integer | `3500` | Color temperature passed to `hyprsunset`. |
+| `[schedules.night_light]` | `enabled` | Boolean | `false` | Enables the daily time window. |
+| `[schedules.night_light]` | `start_hour` | Integer `0..=23` | `21` | Local hour at which the filter becomes active. |
+| `[schedules.night_light]` | `stop_hour` | Integer `0..=23` | `7` | Local hour at which the filter becomes inactive. |
+
+The start hour is included and the stop hour is excluded. A window that crosses midnight works normally (`21` to `7`), and equal start and stop hours mean all day.
+
+The filter is applied at the hour boundary itself rather than on a polling delay. If applying it fails, for example because `hyprsunset` is not running yet, hyprbaric retries within five minutes. A disabled schedule costs nothing at runtime.
+
+## Runtime policy
+
+These tables are TOML-only. Each value is a non-zero, human-readable duration such as `"300ms"`, `"1s"`, or `"60s"`. Every key except `ddc_discovery_interval` has a default, so omitting it keeps that default.
+
+```toml title="config.toml"
+[network]
+traffic_refresh_interval = "1s"
+full_refresh_interval = "8s"
+
+[brightness]
+backlight_refresh_interval = "1s"
+ddc_discovery_delay = "1s"
+# Optional. Omitted, DDC discovery runs once and is never repeated.
+# ddc_discovery_interval = "15m"
+ddc_write_debounce = "300ms"
+ddc_command_timeout = "1200ms"
+
+[power]
+refresh_interval = "15s"
+```
+
+| Table | Key | Default | Effect |
+| --- | --- | --- | --- |
+| `[network]` | `traffic_refresh_interval` | `"1s"` | Refreshes inexpensive `/proc/net/dev` traffic counters. |
+| `[network]` | `full_refresh_interval` | `"8s"` | Refreshes NetworkManager state, access points, and interfaces, and measures latency. |
+| `[brightness]` | `backlight_refresh_interval` | `"1s"` | Polls Linux backlight devices. |
+| `[brightness]` | `ddc_discovery_delay` | `"1s"` | Waits after startup before the first DDC monitor scan. |
+| `[brightness]` | `ddc_discovery_interval` | Unset | Repeats DDC monitor discovery. Left unset, discovery runs once after `ddc_discovery_delay` and never again. Set it only if you hot-plug displays. |
+| `[brightness]` | `ddc_write_debounce` | `"300ms"` | Coalesces rapid DDC brightness changes before writing. |
+| `[brightness]` | `ddc_command_timeout` | `"1200ms"` | Bounds one DDC command before it is treated as failed. |
+| `[power]` | `refresh_interval` | `"15s"` | Refreshes UPower battery and power-profiles-daemon status. |
+
+The latency reading in the network panel is a TCP connection to `1.1.1.1:53` with a 350 ms timeout, made once per `full_refresh_interval`. It is not currently configurable, so raise `full_refresh_interval` if you want it to happen less often.
+
+## Shortcuts
+
+Each built-in action has one nested table inside `[shortcuts]`. The **Keybinds** tab edits these mappings interactively, and TOML can also choose a binding or disable it.
+
+```toml title="config.toml"
+[shortcuts.controls]
+modifiers = ["logo", "shift"]
+key = "O"
+phase = "press"
+
+[shortcuts.toggle_caffeine]
+state = "disabled"
+```
+
+| Binding key | Values | Default | Notes |
+| --- | --- | --- | --- |
+| `modifiers` | Array of `"logo"`, `"ctrl"`, `"shift"`, `"alt"`, `"num"` | Action-specific | `"super"`/`"meta"` alias `"logo"`. `"control"` aliases `"ctrl"`. |
+| `key` | Non-empty key name without `,`, `+`, `<`, or `>` | Action-specific | Ordinary keys are uppercased. `PrintScreen` becomes `Print`. `XF86…` names retain their spelling. |
+| `phase` | `"press"`, `"release"` | `"press"` | Controls whether activation happens on key press or release. |
+| `state` | `"disabled"` | Bound | The only explicit mapping state. It skips portal registration and Hyprland bind reconciliation. |
+
+The full list of all 18 actions, default chords, phases, behavior, and TOML table names is on [Shortcuts](./shortcuts). The **Keybinds** tab’s Record, Disable, and Reset buttons write exactly the keys above.
+
+## Validation
+
+Every value is checked while the file loads, not when it is first used. The table below is the complete set of constraints. Anything not listed here accepts any value of its type.
+
+### Enumerations
+
+Spelling is exact and lowercase. A value outside the accepted set is rejected.
+
+| Keys | Accepted | Rejected |
+| --- | --- | --- |
+| `position` | `"top"`, `"bottom"` | `"left"`, `"Top"` |
+| `indicator_style` | `"roman"`, `"numeric"` | `"arabic"`, `"Roman"` |
+| `visible_range` | `"small"`, `"medium"`, `"large"` | `"7"`, `"huge"` |
+| `phase` | `"press"`, `"release"` | `"hold"` |
+| `state` | `"disabled"` | `"enabled"`, `"off"` |
+| `modifiers` entries | `"logo"`, `"ctrl"`, `"shift"`, `"alt"`, `"num"` | `"cmd"`, `"win"` |
+
+`modifiers` also accepts `"super"` and `"meta"` for `"logo"`, and `"control"` for `"ctrl"`.
+
+### Bounded integers
+
+Bounds are inclusive on both ends.
+
+| Keys | Accepted | Rejected |
+| --- | --- | --- |
+| `opacity` | `20` to `100` | `0`, `19`, `101` |
+| `corner_radius` | `0` to `32` | `33`, `-1` |
+| `accent_hue` | `0` to `359` | `360`, `-1` |
+| `start_hour`, `stop_hour` | `0` to `23` | `24` |
+| `temperature` | Any integer above `0` | `0` |
+
+```toml title="rejected"
+[appearance]
+opacity = 15        # below the 20 floor
+accent_hue = 360    # hue wraps at 359
+
+[schedules.night_light]
+start_hour = 24     # hours are 0..=23
+```
+
+### Durations
+
+The eight runtime-policy keys take a human-readable duration string. Zero is rejected in every case, because each one drives a timer that must advance.
+
+| Accepted | Rejected |
+| --- | --- |
+| `"300ms"`, `"1s"`, `"2m"`, `"1s 500ms"` | `"0s"`, `"0"`, `1` (a bare integer, not a string), `"soon"` |
+
+```toml title="rejected"
+[network]
+traffic_refresh_interval = "0s"   # a cadence cannot be zero
+full_refresh_interval = 8         # must be a quoted duration, not a number
+```
+
+### Shortcut keys
+
+| Rule | Accepted | Rejected |
+| --- | --- | --- |
+| Non-empty after trimming | `"S"`, `"F12"`, `"Print"`, `"XF86AudioMute"` | `""`, `"   "` |
+| No bind separators | as above | `"Super+S"`, `"A,B"`, `"<S>"` |
+
+A chord is expressed as `modifiers` plus a single `key`, so writing the whole chord into `key` is the common mistake. Ordinary key names are uppercased on load, `PrintScreen` normalizes to `Print`, and `XF86…` names keep their exact spelling.
+
+### What a failure does
+
+A file that parses as TOML but fails any check above stops startup. The failing path is logged, and hyprbaric does not fall back to defaults for a file it found but could not read, so check the log when a change appears to have been ignored. An unknown table or key is the one exception: it is ignored rather than rejected.
+
+## Not configurable in TOML
+
+For completeness, these are deliberately outside the configuration file:
+
+| Behavior | Where it lives instead |
+| --- | --- |
+| Do-not-disturb, caffeine, active recording | Session-only runtime state, reset when hyprbaric restarts. |
+| Volume, mute, brightness levels | PipeWire and the kernel backlight or DDC display. |
+| Wi-Fi credentials and connection profiles | NetworkManager. |
+| Screenshot and recording destinations | XDG user directories. See [Environment and files](./environment#where-captures-are-saved). |
+| Log verbosity and format | `RUST_LOG`, `HYPRBARIC_LOG`, `RUST_LOG_STYLE`. |
+| Terminal used for terminal desktop entries | `$TERMINAL`, with a built-in fallback list. |
+| Which features are available at all | Installed backends. See [Dependencies and capabilities](./dependencies). |
