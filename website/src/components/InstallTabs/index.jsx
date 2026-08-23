@@ -5,7 +5,8 @@ import styles from './index.module.css';
 const options = [
   {
     id: 'quick',
-    label: 'Quick install',
+    label: 'Automatic',
+    description: 'Detects your distribution, downloads its native package, verifies it, and installs it.',
     copy: "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh",
     code: (
       <>
@@ -15,41 +16,50 @@ const options = [
     ),
   },
   {
-    id: 'arch',
-    label: 'Arch · PKGBUILD',
-    copy: 'git clone https://github.com/asaphaaning/Hyprbaric.git\ncd Hyprbaric/packaging/aur\nmakepkg -si',
+    id: 'deb',
+    label: 'Debian · Ubuntu',
+    description: 'Installs the release DEB with apt, including its declared runtime dependencies.',
+    copy: "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh",
     code: (
       <>
-        <span className={styles.comment}># build the maintained source package</span>{'\n'}
-        git clone https://github.com/asaphaaning/Hyprbaric.git{'\n'}
-        cd Hyprbaric/packaging/aur{'\n'}
-        makepkg -si
+        <span className={styles.comment}># Debian and Ubuntu are detected automatically; the installer selects the DEB</span>{'\n'}
+        curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh
       </>
     ),
   },
   {
-    id: 'package',
-    label: 'Linux packages',
-    copy: './packaging/build-linux-packages',
+    id: 'pacman',
+    label: 'Arch · Manjaro',
+    description: 'Installs the release Pacman package with pacman.',
+    copy: "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh",
     code: (
       <>
-        <span className={styles.comment}># build AppImage, DEB, RPM, and Pacman artifacts</span>{'\n'}
-        git clone https://github.com/asaphaaning/Hyprbaric.git{'\n'}
-        cd Hyprbaric{'\n'}
-        ./packaging/build-linux-packages
+        <span className={styles.comment}># Arch-based distributions are detected automatically; the installer selects the Pacman package</span>{'\n'}
+        curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh
       </>
     ),
   },
   {
-    id: 'source',
-    label: 'From source',
-    copy: 'git clone https://github.com/asaphaaning/Hyprbaric.git\ncd Hyprbaric\nflutter pub get\nflutter run -d linux',
+    id: 'rpm',
+    label: 'Fedora · openSUSE',
+    description: 'Installs the release RPM with dnf or zypper.',
+    copy: "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh",
     code: (
       <>
-        git clone https://github.com/asaphaaning/Hyprbaric.git{'\n'}
-        cd Hyprbaric{'\n'}
-        flutter pub get{'\n'}
-        flutter run -d linux
+        <span className={styles.comment}># Fedora and openSUSE are detected automatically; the installer selects the RPM</span>{'\n'}
+        curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh
+      </>
+    ),
+  },
+  {
+    id: 'appimage',
+    label: 'Other Linux',
+    description: 'Installs the AppImage in ~/.local/bin when no native package matches.',
+    copy: "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh",
+    code: (
+      <>
+        <span className={styles.comment}># Other x86_64 Linux distributions receive the self-contained AppImage</span>{'\n'}
+        curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh
       </>
     ),
   },
@@ -84,6 +94,7 @@ export default function InstallTabs() {
           </button>
         ))}
       </div>
+      <p className={styles.description}>{selected.description}</p>
       <div className={styles.terminal}>
         <div className={styles.terminalHeader}>
           <span>shell</span>

@@ -97,6 +97,28 @@
   position: relative;
 }
 
+.installDetail {
+  align-items: baseline;
+  color: #858990;
+  display: flex;
+  font-size: 12px;
+  gap: 12px;
+  justify-content: space-between;
+  line-height: 1.5;
+  padding: 9px 2px 0;
+}
+
+.installDetail a {
+  color: #15b5f4;
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.installDetail a:hover {
+  color: #5dccf8;
+  text-decoration: underline;
+}
+
 .installCommand {
   align-items: center;
   background: #07080a;
@@ -909,6 +931,12 @@
 
   .installPicker {
     max-width: 100%;
+  }
+
+  .installDetail {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .commandBadge,
