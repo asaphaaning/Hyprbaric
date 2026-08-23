@@ -13,25 +13,34 @@
 > [!NOTE]
 > hyprbaric is pre-1.0 software. Interfaces and configuration may still change.
 
+## Install
+
+Install the latest verified release—no Flutter or Rust toolchain required:
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/Hyprbaric/master/install.sh | sh
+```
+
+The installer detects your distribution and uses the matching GitHub release artifact:
+
+- Debian and Ubuntu receive the DEB package.
+- Arch Linux and Manjaro receive the Pacman package.
+- Fedora, RHEL, and openSUSE receive the RPM package.
+- Other Linux distributions receive the AppImage.
+
+Every download is checked against the release checksum before installation. You can also [download the latest AppImage or native package](https://github.com/asaphaaning/Hyprbaric/releases/latest) yourself, or see the [installation guide](https://asaphaaning.github.io/Hyprbaric/docs/installation) for pinned releases and source builds.
+
+Start the bar with `hyprbaric`, then add `exec-once = hyprbaric` to `hyprland.conf` when you are ready to launch it with Hyprland.
+
 ## Documentation
 
-Explore the [hyprbaric documentation site](https://asaphaaning.github.io/hyprbaric/) for installation, configuration, shortcuts, and a closer look at the bar in action.
+Explore the [hyprbaric documentation site](https://asaphaaning.github.io/Hyprbaric/) for configuration, shortcuts, and a closer look at the bar in action.
 
 ## Scope and requirements
 
 hyprbaric is Linux-only and targets hyprland, with a Flutter UI, Rust backend, and a small native layer-shell shim.
 
 Core runtime requirements are hyprland, GTK 3, GTK layer shell, Wayland, and `xdg-desktop-portal-hyprland`. Individual features can additionally use WirePlumber, NetworkManager, `grim`, `slurp`, `wf-recorder`, `hyprpicker`, `hyprsunset`, `ddcutil`, UPower, and power-profiles-daemon. See [runtime dependencies](docs/runtime-dependencies.md) for the distro package matrix and the distinction between core and optional integrations.
-
-## Install the latest release
-
-When a packaged GitHub release is available, the installer chooses its matching DEB, RPM, or Pacman package and falls back to the AppImage elsewhere:
-
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/asaphaaning/hyprbaric/master/install.sh | sh
-```
-
-To inspect the script or pin a release, download it first and run `sh install.sh --version vX.Y.Z`. The full [installation guide](https://asaphaaning.github.io/hyprbaric/docs/installation) covers the distro-package and source-build alternatives.
 
 ## Build and run from source
 

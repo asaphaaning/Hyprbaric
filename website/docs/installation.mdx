@@ -28,18 +28,33 @@ Everything else is per feature: `wireplumber` for audio, `grim` and `slurp` for 
 
 [Dependencies and capabilities](./dependencies) lists all twelve against the feature each one powers, how it is detected, and its Debian and RPM package names.
 
-## Choose an installation route
+## Install the latest release
 
-The quick installer fetches the latest GitHub release and selects the native package for your distribution: DEB on Debian/Ubuntu, Pacman on Arch, RPM on Fedora/RHEL/openSUSE, and an AppImage fallback elsewhere. The Arch route is the repository’s maintained `PKGBUILD` template, while the Linux packages route builds the AppImage, DEB, RPM, and Pacman artifacts defined in this checkout. The source route is the quickest way to develop or try the current version.
+The installer fetches the latest verified GitHub release and selects the native package for your distribution: DEB on Debian/Ubuntu, Pacman on Arch/Manjaro, RPM on Fedora/RHEL/openSUSE, and an AppImage fallback elsewhere. You do not need Flutter, Rust, Git, or a source checkout.
 
 <InstallTabs />
+
+Prefer to handle the package yourself? [Open the latest release](https://github.com/asaphaaning/Hyprbaric/releases/latest) to download its AppImage, DEB, RPM, or Pacman package and `SHA256SUMS` directly.
 
 <div className="hyprDocNote">
   <div>Note</div>
   <p>Each <code>v*</code> tag runs formatting, generated-binding, Flutter, and Rust verification before building a GitHub release with checksummed packages attached. A tag name is a version. The installer resolves <code>latest</code> unless you pass <code>--version</code>, which takes the tag verbatim: <code>--version v0.1.0</code> installs that release and nothing newer.</p>
 </div>
 
-Before creating a tag, maintainers can exercise the AppImage path alone when iterating:
+### Build from source
+
+Use the source checkout when you want to develop hyprbaric or run the current `master` branch:
+
+```sh title="terminal"
+git clone https://github.com/asaphaaning/Hyprbaric.git
+cd Hyprbaric
+flutter pub get
+flutter run -d linux
+```
+
+### Build release packages
+
+This is a maintainer workflow, not a prerequisite for installing hyprbaric. Before creating a tag, maintainers can exercise the AppImage path alone when iterating:
 
 ```sh
 HYPRBARIC_RELEASE_JOBS=linux-appimage ./packaging/build-linux-packages --skip-clean
