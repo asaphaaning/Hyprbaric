@@ -636,6 +636,11 @@ html[data-theme] .hyprNavbar .hyprNavbarSearch [class*='dropdownMenu'] {
 }
 
 @media (max-width: 640px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   .hyprNavbarInner { gap: 12px; padding: 0 16px; }
   .hyprNavbarLogo { height: 31px; width: 31px; }
   .hyprNavbarBrand { font-size: 14px; gap: 8px; }
@@ -643,4 +648,100 @@ html[data-theme] .hyprNavbar .hyprNavbarSearch [class*='dropdownMenu'] {
   .hyprNavbarSearch .navbar__search { max-width: none; }
   .hyprNavbarSearch .navbar__search-input { font-size: 12px; }
   .hyprGithubButton { display: none; }
+}
+
+/* Documentation is a compact, on-demand list on small screens. Keeping the
+   full desktop sidebar in normal flow pushed the current article below every
+   navigation item, which made the page feel broken rather than navigable. */
+.hyprDocMobileNav {
+  display: none;
+}
+
+.hyprDocSidebar {
+  flex: 0 0 var(--doc-sidebar-width);
+  min-width: 0;
+}
+
+.hyprDocSidebar .theme-doc-sidebar-container {
+  width: 100%;
+}
+
+@media (max-width: 996px) {
+  .hyprDocMobileNav {
+    align-items: center;
+    background: linear-gradient(180deg, #1a1d22, #131518);
+    border: 1px solid #282c33;
+    border-radius: 11px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 12px 28px -22px rgb(0 0 0 / 95%);
+    color: #d9d6d2;
+    cursor: pointer;
+    display: flex;
+    font-family: var(--ifm-font-family-monospace);
+    font-size: 11px;
+    justify-content: space-between;
+    letter-spacing: .1em;
+    margin: 28px 28px 0;
+    padding: 12px 14px;
+    text-align: left;
+    text-transform: uppercase;
+    width: calc(100% - 56px);
+  }
+
+  .hyprDocMobileNav:hover {
+    border-color: #454a52;
+    color: #fff;
+  }
+
+  .hyprDocMobileNav > span:last-child {
+    color: #ff8a7c;
+    font-size: 17px;
+    line-height: .8;
+  }
+
+  .hyprDocSidebar {
+    display: none;
+  }
+
+  .hyprDocSidebarOpen {
+    display: block;
+    margin: 10px 28px 0;
+  }
+
+  .hyprDocSidebar .theme-doc-sidebar-container {
+    background: #101216;
+    border: 1px solid #24272d;
+    border-radius: 13px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%), 0 18px 38px -28px rgb(0 0 0 / 95%);
+    height: auto;
+    overflow: visible;
+    padding: 12px;
+    position: static;
+    width: 100%;
+  }
+
+  .hyprDocSidebar .theme-doc-sidebar-menu::before {
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hyprDocMobileNav {
+    margin: 22px 16px 0;
+    width: calc(100% - 32px);
+  }
+
+  .hyprDocSidebarOpen {
+    margin: 10px 16px 0;
+  }
+}
+
+@media (max-width: 220px) {
+  .hyprNavbarInner {
+    justify-content: center;
+    padding-inline: 10px;
+  }
+
+  .hyprNavbarSearch {
+    display: none;
+  }
 }

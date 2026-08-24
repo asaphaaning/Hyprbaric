@@ -296,7 +296,7 @@ function BarCloseup() {
     <section className={styles.closeup}>
       <div className={styles.closeupHeading}>
         <span>The bar, up close</span>
-        <p>Hover an element to see what it does.</p>
+        <p>Tap or hover an element to see what it does.</p>
       </div>
       <div className={styles.barPreview}>
         {cluster('left', leftBar, 'hyprbaric launcher and workspace cluster', leftParts)}
@@ -310,7 +310,7 @@ function BarCloseup() {
             <div><span>{part.label}</span><strong>{part.title}</strong><p>{part.text}</p></div>
             <kbd>{part.key}</kbd>
           </>
-        ) : <div className={styles.barIdle}><span>Idle</span><p>Hover an element on the bar above.</p></div>}
+        ) : <div className={styles.barIdle}><span>Idle</span><p>Tap or hover an element on the bar above.</p></div>}
       </div>
     </section>
   );
