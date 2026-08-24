@@ -882,7 +882,7 @@
 @media (max-width: 996px) {
   .hero,
   .configuration {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero {
@@ -962,16 +962,26 @@
   }
 
   .closeupHeading p {
-    display: none;
+    display: block;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 5px;
   }
 
   .barPreview {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .barCluster {
+    min-width: 0;
     width: 100%;
   }
 
   .barBreak {
-    gap: 2px;
-    padding: 0 2px;
+    display: none;
   }
 
   .barExplanation {
@@ -988,11 +998,61 @@
   }
 
   .moduleGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panelPreview {
+    aspect-ratio: auto;
+    height: min(70vw, 360px);
+    padding: 16px;
   }
 
   .configuration {
     gap: 28px;
     padding-top: 64px;
+  }
+}
+
+@media (max-width: 220px) {
+  .page {
+    padding-inline: 10px;
+  }
+
+  .hero {
+    gap: 24px;
+    padding-top: 32px;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(2rem, 10vw, 2.625rem);
+    overflow-wrap: anywhere;
+  }
+
+  .heroCopy > p,
+  .modules > p,
+  .moduleCard p,
+  .smallCard p,
+  .guideCard p {
+    overflow-wrap: anywhere;
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    height: auto;
+    min-height: 40px;
+    padding: 10px 12px;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .barExplanation,
+  .barIdle {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .workspaceSample {
+    overflow-x: auto;
   }
 }
