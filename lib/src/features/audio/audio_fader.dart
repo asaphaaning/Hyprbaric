@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../bindings/bindings.dart';
+import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
 import 'audio_chrome.dart';
 
@@ -98,8 +99,8 @@ class AudioFaderState extends State<AudioFader> {
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: SizedBox(
-          width: 44,
-          height: 168,
+          width: 52,
+          height: 152,
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final Size size = constraints.biggest;
@@ -163,8 +164,8 @@ class AudioDisabledFader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 44,
-      height: 168,
+      width: 52,
+      height: 152,
       child: CustomPaint(
         painter: AudioFaderPainter(
           value: 0,
@@ -192,74 +193,94 @@ class AudioFaderPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final RRect well = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(8),
+    final Rect meter = Rect.fromLTWH(1, 0, 10, size.height);
+    final RRect meterWell = RRect.fromRectAndRadius(
+      meter,
+      const Radius.circular(3),
     );
+    canvas.drawRRect(meterWell, Paint()..color = AudioMixerColors.rail);
     canvas.drawRRect(
-      well,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[Color(0x26121C25), Color(0x141E9BCF)],
-        ).createShader(well.outerRect),
-    );
-    final Rect rail = Rect.fromLTRB(8, 12, size.width - 8, size.height - 10);
-    final RRect railShape = RRect.fromRectAndRadius(
-      rail,
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(railShape, Paint()..color = AudioMixerColors.rail);
-    canvas.drawRRect(
-      railShape.deflate(0.5),
+      meterWell.deflate(0.5),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
         ..color = AudioMixerColors.railBorder,
     );
 
-    const int segments = 20;
-    const double gap = 3;
+    const int segments = 24;
+    const double gap = 1.5;
     final double segmentHeight =
-        (rail.height - gap * (segments - 1)) / segments;
+        (meter.height - 4 - gap * (segments - 1)) / segments;
     final int activeSegments = muted
         ? 0
         : (value.clamp(0, 1) * segments).round().clamp(0, segments);
     final Paint segmentPaint = Paint();
     for (int i = 0; i < segments; i += 1) {
       final bool active = i < activeSegments;
-      final double top = rail.bottom - (i + 1) * segmentHeight - i * gap;
+      final double top = meter.bottom - 2 - (i + 1) * segmentHeight - i * gap;
       final Rect segment = Rect.fromLTWH(
-        rail.left + 4,
+        meter.left + 2,
         top,
-        rail.width - 8,
+        meter.width - 4,
         segmentHeight,
       );
-      segmentPaint.color = active
-          ? accent.withValues(alpha: 0.88)
-          : AudioMixerColors.slot;
+      final double threshold = i / segments;
+      final Color ladder = threshold >= 0.90
+          ? AudioMixerColors.peak
+          : threshold >= 0.76
+          ? AudioMixerColors.warning
+          : AudioMixerColors.output;
+      segmentPaint.color = active ? ladder : AudioMixerColors.slot;
       canvas.drawRRect(
         RRect.fromRectAndRadius(segment, const Radius.circular(1.5)),
         segmentPaint,
       );
-      canvas.drawLine(
-        Offset(segment.left, segment.bottom),
-        Offset(segment.right, segment.bottom),
-        Paint()
-          ..color = AudioMixerColors.slotBorder.withValues(
-            alpha: active ? 0.35 : 0.24,
-          )
-          ..strokeWidth = 0.5,
-      );
     }
 
-    final double handleCenterY = rail.bottom - value.clamp(0, 1) * rail.height;
+    final Rect track = Rect.fromLTWH(17, 0, 35, size.height);
+    final Rect slot = Rect.fromCenter(
+      center: track.center,
+      width: 6,
+      height: track.height,
+    );
+    final RRect slotShape = RRect.fromRectAndRadius(
+      slot,
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(
+      slotShape,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xFF15161A), Color(0xFF222329)],
+        ).createShader(slot),
+    );
+    final double handleCenterY =
+        7.5 + (1 - value.clamp(0, 1)) * (track.height - 15);
+    final double fillTop = handleCenterY;
+    final Rect fill = Rect.fromLTRB(
+      slot.center.dx - 1,
+      fillTop,
+      slot.center.dx + 1,
+      slot.bottom,
+    );
+    final Color levelColor = value >= .88
+        ? AudioMixerColors.peak
+        : value >= .72
+        ? AudioMixerColors.warning
+        : accent;
+    if (!muted) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(fill, const Radius.circular(1)),
+        Paint()..color = levelColor,
+      );
+    }
     final Rect handleRect = Rect.fromCenter(
-      center: Offset(size.width / 2, handleCenterY),
-      width: 33,
-      height: 17,
-    ).translate(0, -1);
+      center: Offset(track.center.dx, handleCenterY),
+      width: 26,
+      height: 15,
+    );
     final RRect handle = RRect.fromRectAndRadius(
       handleRect,
       const Radius.circular(3.5),
@@ -281,16 +302,12 @@ class AudioFaderPainter extends CustomPainter {
             : AudioMixerColors.handleBorder,
     );
     final RRect handleFace = RRect.fromRectAndRadius(
-      handleRect.deflate(5).translate(0, -0.5),
+      Rect.fromCenter(center: handleRect.center, width: 20, height: 1),
       const Radius.circular(1.5),
     );
-    canvas.drawRRect(handleFace, Paint()..color = AudioMixerColors.handleFace);
     canvas.drawRRect(
-      handleFace.deflate(0.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.6
-        ..color = AudioMixerColors.handleLine,
+      handleFace,
+      Paint()..color = muted ? HyprColors.textFaint : levelColor,
     );
   }
 

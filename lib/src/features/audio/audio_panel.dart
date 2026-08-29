@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bindings/bindings.dart';
-import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
-import 'audio_channel_strip.dart';
 import 'audio_chrome.dart';
-import 'brightness_control.dart';
+import 'audio_mixer_layout.dart';
 
 class AudioPanel extends StatelessWidget {
   const AudioPanel({
@@ -35,69 +33,42 @@ class AudioPanel extends StatelessWidget {
         snapshot != null &&
         (!snapshot.isAvailable || (output == null && input == null));
 
+    final int channelCount = <AudioEndpoint?>[
+      output,
+      input,
+    ].whereType<AudioEndpoint>().length;
+
     return HyprPopoverPanel(
       borderRadius: borderRadius,
-      constraints: const BoxConstraints(minWidth: 288, maxWidth: 288),
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+      constraints: const BoxConstraints(minWidth: 336, maxWidth: 336),
+      padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          HyprSectionLabel(
-            'Audio & Display',
-            color: AudioMixerColors.label,
-            fontSize: HyprTypography.size(10),
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-          const SizedBox(height: 10),
-          BrightnessControl(
-            status: brightnessStatus.asData?.value,
-            loading: brightnessStatus.isLoading,
+          AudioMixerHeader(output: output),
+          AudioMixerStage(
+            output: output,
+            input: input,
+            brightnessStatus: brightnessStatus.asData?.value,
+            brightnessLoading: brightnessStatus.isLoading,
+            onSetVolume: onSetVolume,
+            onSetMuted: onSetMuted,
             onSetBrightness: onSetBrightness,
           ),
-          const HyprSectionBreak(before: 13, after: 12),
-          HyprSectionLabel(
-            'Audio Mixer',
-            color: AudioMixerColors.label,
-            fontSize: HyprTypography.size(10),
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-          const SizedBox(height: 17),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: AudioChannelStrip(
-                  channel: AudioMixerChannel.output,
-                  endpoint: output,
-                  fallbackName: 'No output device',
-                  onSetVolume: onSetVolume,
-                  onSetMuted: onSetMuted,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const SizedBox(height: 230, child: AudioMixerDivider()),
-              const SizedBox(width: 16),
-              Expanded(
-                child: AudioChannelStrip(
-                  channel: AudioMixerChannel.input,
-                  endpoint: input,
-                  fallbackName: 'No input device',
-                  onSetVolume: onSetVolume,
-                  onSetMuted: onSetMuted,
-                ),
-              ),
-            ],
-          ),
+          AudioMasterRail(output: output),
+          AudioMixerFooter(channelCount: channelCount),
           if (status.isLoading) ...<Widget>[
-            const SizedBox(height: 14),
-            const AudioMessage(message: 'Reading audio devices...'),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: AudioMessage(message: 'Reading audio devices...'),
+            ),
           ] else if (unavailable) ...<Widget>[
-            const SizedBox(height: 14),
-            AudioMessage(
-              message: snapshot.message ?? 'Audio controls are unavailable.',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: AudioMessage(
+                message: snapshot.message ?? 'Audio controls are unavailable.',
+              ),
             ),
           ],
         ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../bindings/bindings.dart';
+import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
+import 'audio_chrome.dart';
 import 'brightness_knob.dart';
 import 'brightness_status_view.dart';
 
@@ -10,17 +12,22 @@ export 'brightness_knob_painter.dart' show BrightnessKnobPainter;
 export 'brightness_knob_readout.dart' show BrightnessKnobReadout;
 export 'brightness_status_view.dart' show BrightnessStatusView;
 
+/// Layouts supported by [BrightnessControl].
+enum BrightnessControlPresentation { standalone, console }
+
 class BrightnessControl extends StatefulWidget {
   const BrightnessControl({
     super.key,
     required this.status,
     required this.loading,
     required this.onSetBrightness,
+    this.presentation = BrightnessControlPresentation.standalone,
   });
 
   final BrightnessStatus? status;
   final bool loading;
   final ValueChanged<int> onSetBrightness;
+  final BrightnessControlPresentation presentation;
 
   @override
   State<BrightnessControl> createState() => BrightnessControlState();
@@ -66,25 +73,70 @@ class BrightnessControlState extends State<BrightnessControl> {
         ? status?.displayLabel ?? 'Display brightness'
         : status?.displayLabel ?? 'Brightness unavailable';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
-      child: Center(
-        child: Semantics(
-          slider: available,
-          label: label,
-          value: available ? '$value' : '--',
-          child: Opacity(
-            opacity: available ? 1 : 0.45,
-            child: BrightnessKnob(
-              value: value.clamp(0, 100),
-              enabled: available,
-              onChanged: (int next) => _setValue(next.toDouble()),
-              onChangeEnd: (int next) =>
-                  _setValue(next.toDouble(), force: true),
-            ),
+    final Widget knob = Center(
+      child: Semantics(
+        slider: available,
+        label: label,
+        value: available ? '$value' : '--',
+        child: Opacity(
+          opacity: available ? 1 : 0.45,
+          child: BrightnessKnob(
+            value: value.clamp(0, 100),
+            enabled: available,
+            presentation:
+                widget.presentation == BrightnessControlPresentation.console
+                ? BrightnessKnobPresentation.console
+                : BrightnessKnobPresentation.labeled,
+            onChanged: (int next) => _setValue(next.toDouble()),
+            onChangeEnd: (int next) => _setValue(next.toDouble(), force: true),
           ),
         ),
       ),
     );
+
+    if (widget.presentation == BrightnessControlPresentation.console) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AudioMixerColors.well,
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x70000000),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                  blurStyle: BlurStyle.inner,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Text.rich(
+                TextSpan(
+                  text: 'DISPLAY ',
+                  children: <InlineSpan>[
+                    TextSpan(
+                      text: available ? '$value%' : '--',
+                      style: const TextStyle(color: AudioMixerColors.quiet),
+                    ),
+                  ],
+                ),
+                style: HyprTypography.compactMonoStrong.copyWith(
+                  color: AudioMixerColors.value,
+                  fontSize: HyprTypography.size(10),
+                  letterSpacing: 2.2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          knob,
+        ],
+      );
+    }
+
+    return Padding(padding: const EdgeInsets.fromLTRB(0, 2, 0, 0), child: knob);
   }
 }

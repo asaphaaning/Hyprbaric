@@ -2809,13 +2809,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Fiber_5G'), findsOneWidget);
-    expect(find.text('AUDIO MIXER'), findsNothing);
+    expect(find.text('MIXER'), findsNothing);
 
     await tester.tap(find.bySemanticsLabel('Audio and display controls'));
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
     expect(find.text('Fiber_5G'), findsNothing);
   });
 
@@ -3020,7 +3020,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsNothing);
+    expect(find.text('MIXER'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('bar-volume-knob-icon')),
       findsOneWidget,
@@ -3032,11 +3032,14 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
-    expect(find.text('OUT\nSPEAKERS'), findsOneWidget);
-    expect(find.text('IN\nMIC'), findsOneWidget);
-    expect(find.text('62'), findsOneWidget);
-    expect(find.text('80'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
+    expect(find.text('OUT'), findsOneWidget);
+    expect(find.text('MIC'), findsOneWidget);
+    expect(find.text('EVO4 Analog Surround 4.0'), findsOneWidget);
+    expect(find.text('MASTER'), findsOneWidget);
+    expect(find.text('2 CHANNELS'), findsOneWidget);
+    expect(find.text('HYPRBARIC AUDIO'), findsOneWidget);
+    expect(find.text('M'), findsNWidgets(2));
     expect(
       find.bySemanticsLabel('EVO4 Analog Surround 4.0 volume'),
       findsOneWidget,
@@ -3065,11 +3068,13 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('AUDIO & DISPLAY'), findsOneWidget);
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
-    expect(find.text('BRIGHTNESS'), findsOneWidget);
-    expect(find.text('62'), findsOneWidget);
-    expect(find.text('80'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
+    expect(find.text('DISPLAY 72%'), findsOneWidget);
+    expect(find.text('OUT'), findsOneWidget);
+    expect(find.text('MIC'), findsOneWidget);
+    expect(find.text('MASTER'), findsOneWidget);
+    expect(find.text('2 CHANNELS'), findsOneWidget);
+    expect(tester.getSize(find.byType(AudioPanel)).width, 336);
   });
 
   testWidgets('brightness control renders available and unavailable states', (
@@ -3269,7 +3274,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 90));
 
     expect(find.text('VOLUME'), findsOneWidget);
-    expect(find.text('100'), findsOneWidget);
+    expect(find.text('0.0 dB'), findsWidgets);
 
     await drag.up();
   });
