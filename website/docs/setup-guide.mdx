@@ -1,0 +1,27 @@
+---
+sidebar_position: 5
+title: Setup guide
+description: How Hyprbaric's first-run appearance guide starts, remembers completion, and can be opened again.
+kicker: First launch
+---
+
+Hyprbaric opens a short appearance guide the first time it starts. The guide previews transparency, accent colour, bar position, and workspace labels before applying the choices to the live bar.
+
+Selecting **Finish** or **Skip setup** records completion in the user configuration. The guide will not open automatically again, but **Settings → About → Run setup guide again** can launch it at any time. Running it manually does not re-enable automatic startup.
+
+## Disable the automatic guide
+
+To prevent the guide from ever opening automatically, add this to `config.toml`:
+
+```toml
+[setup]
+startup = "never"
+```
+
+The default is `startup = "once"`. Hyprbaric owns the `completed` value and writes it after **Finish** or **Skip setup**; it should not normally need to be edited by hand.
+
+The configuration file is read from `HYPRBARIC_CONFIG` when set, otherwise from `$XDG_CONFIG_HOME/hyprbaric/config.toml` or `~/.config/hyprbaric/config.toml`.
+
+## Multiple monitors
+
+Only the primary Hyprbaric view opens the automatic guide. Its preview controls the shared appearance settings, so completing the guide updates every bar window. A manual rerun also opens once rather than once per monitor.

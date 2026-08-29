@@ -24,6 +24,7 @@ mod recording;
 mod schedule;
 mod screenshot;
 mod session;
+mod setup;
 mod shortcuts;
 mod signals;
 mod supervision;

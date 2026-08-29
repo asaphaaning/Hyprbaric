@@ -10,7 +10,7 @@ use tracing::instrument;
 use crate::{
     appearance, audio, brightness, caffeine, capabilities, clock, color_picker, config, hyprland,
     launcher, modules, network, night_light, notifications, portals, power, recording, schedule,
-    screenshot, session, shortcuts, tray, workspaces,
+    screenshot, session, setup, shortcuts, tray, workspaces,
 };
 use crate::{
     appearance::Snapshot as AppearanceSnapshot,
@@ -30,6 +30,7 @@ use crate::{
     recording::Snapshot as RecordingSnapshot,
     schedule::Snapshot as ScheduleSnapshot,
     screenshot::Handle as ScreenshotHandle,
+    setup::Status as SetupStatus,
     tray::Snapshot as TraySnapshot,
     workspaces::Snapshot as WorkspaceSettingsSnapshot,
 };
@@ -60,6 +61,7 @@ pub(crate) struct Components {
     portal: Option<Arc<portals::Settings>>,
     session: session::Handle,
     shortcuts: shortcuts::Handle,
+    setup: setup::Handle,
 }
 
 /// A fully bootstrapped application and its coherent initial UI projection.
@@ -91,6 +93,7 @@ pub struct Initial {
     clock: ClockSnapshot,
     capabilities: CapabilitySnapshot,
     session_availability: session::Availability,
+    setup: SetupStatus,
     color_scheme: Option<ColorScheme>,
 }
 
@@ -135,6 +138,7 @@ impl Initial {
             Output::Clock(self.clock),
             Output::Capabilities(self.capabilities),
             Output::SessionAvailability(self.session_availability),
+            Output::Setup(self.setup),
         ];
 
         if let Some(color_scheme) = self.color_scheme {
@@ -207,6 +211,9 @@ impl Components {
         let (clock, initial_clock) = clock::Clock::bootstrap();
         log_bootstrap_phase("clock", phase_started.elapsed());
         let phase_started = Instant::now();
+        let (setup, initial_setup) = setup::Guide::bootstrap(&config.setup);
+        log_bootstrap_phase("setup", phase_started.elapsed());
+        let phase_started = Instant::now();
         let initial_capabilities = capabilities::Snapshot::read();
         log_bootstrap_phase("capabilities", phase_started.elapsed());
         let phase_started = Instant::now();
@@ -260,6 +267,7 @@ impl Components {
                 portal,
                 session,
                 shortcuts,
+                setup,
             },
             Initial {
                 workspace: initial_workspace,
@@ -281,6 +289,7 @@ impl Components {
                 clock: initial_clock,
                 capabilities: initial_capabilities,
                 session_availability,
+                setup: initial_setup,
                 color_scheme: initial_scheme,
             },
         ))
@@ -323,6 +332,8 @@ impl Components {
             color_picker_reports: self.color_picker.subscribe_results(),
             tray,
             clock: self.clock.subscribe(),
+            setup: self.setup.subscribe(),
+            setup_reports: self.setup.subscribe_results(),
             shortcuts: self.shortcuts.subscribe(),
         }
     }
@@ -425,6 +436,11 @@ impl Components {
     /// Returns the global shortcut registry.
     pub fn shortcuts(&self) -> shortcuts::Handle {
         Arc::clone(&self.shortcuts)
+    }
+
+    /// Returns the first-run setup runtime.
+    pub fn setup(&self) -> setup::Handle {
+        Arc::clone(&self.setup)
     }
 
     /// Returns the desktop session action handle.

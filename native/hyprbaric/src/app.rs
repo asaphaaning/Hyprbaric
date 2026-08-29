@@ -9,7 +9,7 @@ use crate::{
     brightness, caffeine, clock, color_picker,
     hyprland::{self, FocusedWindowSnapshot, WorkspaceSnapshot},
     launcher, modules, night_light, notifications, portals, power, recording, schedule, screenshot,
-    session, shortcuts, tray, workspaces,
+    session, setup, shortcuts, tray, workspaces,
 };
 
 mod output;
@@ -55,6 +55,8 @@ pub enum Command {
     Recording(recording::Command),
     /// Change notification state.
     Notifications(notifications::Command),
+    /// Acknowledge the first-run setup journey.
+    Setup(setup::Command),
     /// Execute a clock/calendar request.
     Clock(clock::Command),
     /// Activate a tray item.
@@ -294,6 +296,10 @@ impl App {
             }
             Command::Notifications(command) => {
                 self.components.notifications().apply(command).await;
+                Outcome::None
+            }
+            Command::Setup(command) => {
+                self.components.setup().apply(command).await;
                 Outcome::None
             }
             Command::Clock(command) => {

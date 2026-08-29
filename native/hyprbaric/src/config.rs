@@ -9,7 +9,8 @@ use toml_edit::DocumentMut;
 use tracing::instrument;
 
 use crate::{
-    appearance, brightness, modules, network, night_light, power, schedule, shortcuts, workspaces,
+    appearance, brightness, modules, network, night_light, power, schedule, setup, shortcuts,
+    workspaces,
 };
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -22,6 +23,7 @@ pub struct Configuration {
     pub night_light: night_light::Configuration,
     pub power: power::Configuration,
     pub schedules: schedule::Configuration,
+    pub setup: setup::Configuration,
     pub shortcuts: shortcuts::Configuration,
     pub workspaces: workspaces::Configuration,
 }

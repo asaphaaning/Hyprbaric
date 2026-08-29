@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hyprbaric/src/bindings/bindings.dart';
+import 'package:hyprbaric/src/features/rust_commands.dart';
+import 'package:hyprbaric/src/features/setup/setup_guide_host.dart';
+import 'package:hyprbaric/src/features/setup/setup_guide_state.dart';
+import 'package:hyprbaric/src/state/providers.dart';
+import 'package:hyprbaric/src/theme/hypr_palette.dart';
+
+void main() {
+  testWidgets('required setup opens once on the automatic host', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingDispatcher dispatcher = _RecordingDispatcher();
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          setupGuideAutomaticHostProvider.overrideWithValue(true),
+          setupStatusProvider.overrideWith(
+            (_) => Stream<SetupStatus>.value(
+              const SetupStatus(state: SetupState.required),
+            ),
+          ),
+          rustCommandDispatcherProvider.overrideWithValue(dispatcher),
+        ],
+        child: _surface(const SetupGuideHost()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('setup-guide')), findsOneWidget);
+    expect(find.text('Welcome to\nHyprbaric'), findsOneWidget);
+
+    await tester.tap(find.text('SKIP'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('setup-guide')), findsNothing);
+    expect(
+      dispatcher.intents.map((RustIntent intent) => intent.debugLabel),
+      contains('setup_complete:skipped'),
+    );
+  });
+
+  testWidgets('manual request opens setup on a non-automatic host', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          setupGuideAutomaticHostProvider.overrideWithValue(false),
+          setupStatusProvider.overrideWith(
+            (_) => Stream<SetupStatus>.value(
+              const SetupStatus(state: SetupState.required),
+            ),
+          ),
+        ],
+        child: _surface(
+          const Stack(
+            children: <Widget>[SetupGuideHost(), _ManualLaunchButton()],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('setup-guide')), findsNothing);
+
+    await tester.tap(find.text('Launch'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('setup-guide')), findsOneWidget);
+  });
+}
+
+Widget _surface(Widget child) {
+  return MaterialApp(
+    theme: ThemeData(
+      useMaterial3: true,
+      extensions: const <ThemeExtension<dynamic>>[HyprPalette.fallback],
+    ),
+    home: Scaffold(body: Stack(children: <Widget>[child])),
+  );
+}
+
+class _ManualLaunchButton extends ConsumerWidget {
+  const _ManualLaunchButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton(
+      onPressed: () => ref.read(setupGuideRequestProvider.notifier).show(),
+      child: const Text('Launch'),
+    );
+  }
+}
+
+class _RecordingDispatcher extends RustCommandDispatcher {
+  final List<RustIntent> intents = <RustIntent>[];
+
+  @override
+  void dispatch(RustIntent intent) {
+    intents.add(intent);
+  }
+}

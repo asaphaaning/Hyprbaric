@@ -28,6 +28,27 @@ sealed class RustIntent {
   void send();
 }
 
+sealed class SetupIntent extends RustIntent {
+  const SetupIntent();
+
+  const factory SetupIntent.complete(SetupOutcome outcome) =
+      _SetupCompleteIntent;
+}
+
+class _SetupCompleteIntent extends SetupIntent {
+  const _SetupCompleteIntent(this.outcome);
+
+  final SetupOutcome outcome;
+
+  @override
+  String get debugLabel => 'setup_complete:${outcome.name}';
+
+  @override
+  void send() {
+    SetupCommandComplete(outcome: outcome).sendSignalToRust();
+  }
+}
+
 sealed class NetworkIntent extends RustIntent {
   const NetworkIntent();
 

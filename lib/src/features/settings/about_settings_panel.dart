@@ -5,6 +5,7 @@ import '../../bindings/bindings.dart';
 import '../../state/providers.dart';
 import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
+import '../setup/setup_guide_state.dart';
 
 class AboutSettingsPanel extends ConsumerWidget {
   const AboutSettingsPanel({super.key});
@@ -17,6 +18,23 @@ class AboutSettingsPanel extends ConsumerWidget {
       padding: EdgeInsets.zero,
       children: <Widget>[
         const _ProductHeader(),
+        const SizedBox(height: 10),
+        HyprCommandButton(
+          key: const ValueKey<String>('run-setup-guide'),
+          label: 'Run setup guide again',
+          icon: const Icon(Icons.auto_awesome_rounded, size: 15),
+          onPressed: () => ref.read(setupGuideRequestProvider.notifier).show(),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          constraints: const BoxConstraints(minHeight: 36),
+          color: Colors.black.withValues(alpha: 0.14),
+          borderColor: HyprColors.popupStroke,
+          foregroundColor: HyprColors.textMuted,
+          hoverForegroundColor: HyprColors.text,
+          hoverBorderColor: context.hyprPalette.borderSoft,
+          textStyle: HyprTypography.compactMonoStrong.copyWith(
+            fontSize: HyprTypography.size(11),
+          ),
+        ),
         if (status.entries.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           Text(
