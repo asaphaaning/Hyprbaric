@@ -48,6 +48,7 @@ void main() {
   testWidgets('manual request opens setup on a non-automatic host', (
     WidgetTester tester,
   ) async {
+    int openingCount = 0;
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -62,8 +63,12 @@ void main() {
           ),
         ],
         child: _surface(
-          const Stack(
-            children: <Widget>[SetupGuideHost(), _ManualLaunchButton()],
+          Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              SetupGuideHost(onOpening: () => openingCount += 1),
+              const _ManualLaunchButton(),
+            ],
           ),
         ),
       ),
@@ -76,6 +81,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey<String>('setup-guide')), findsOneWidget);
+    expect(openingCount, 1);
+    final Finder scrim = find.byKey(
+      const ValueKey<String>('setup-guide-scrim'),
+    );
+    expect(tester.getTopLeft(scrim).dy, 43);
+    expect(tester.getSize(scrim), const Size(1200, 757));
   });
 
   testWidgets('guide preserves the v6 split geometry and control vocabulary', (

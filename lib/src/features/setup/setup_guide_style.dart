@@ -5,7 +5,7 @@ import '../../widgets/hypr_surface.dart';
 const String setupGuideWallpaper = 'assets/wallpaper-demo.png';
 
 abstract final class SetupGuideColors {
-  static const Color scrim = Color(0xF5000308);
+  static const Color scrim = Color(0xB8000308);
   static const Color text = Color(0xFFF0F1F4);
   static const Color textMuted = Color(0xFF92949C);
   static const Color textFaint = Color(0xFF60636C);
@@ -178,19 +178,17 @@ class _SetupGuideButtonState extends State<SetupGuideButton> {
           scale: _pressed ? .97 : 1,
           duration: const Duration(milliseconds: 90),
           child: Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: primary
-                  ? Color.lerp(const Color(0xFF24262D), accent, .10)
-                  : const Color(0xFF24262D),
-              borderRadius: BorderRadius.circular(13),
+              color: const Color(0xFF24262D),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xD9000000)),
               boxShadow: const <BoxShadow>[
                 BoxShadow(
-                  color: Color(0xB5000000),
-                  blurRadius: 7,
-                  spreadRadius: -3,
-                  offset: Offset(0, 3),
+                  color: Color(0x99000000),
+                  blurRadius: 5,
+                  spreadRadius: -2,
+                  offset: Offset(0, 2),
                 ),
               ],
             ),

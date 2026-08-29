@@ -714,7 +714,7 @@ class _BarViewState extends ConsumerState<_BarView> {
         ToastHost(barHeight: barHeight, onToastPressed: _openNotificationToast),
         const OsdHost(),
         if (_settingsOpen) SettingsModalOverlay(onClose: _closeSettingsModal),
-        const SetupGuideHost(),
+        SetupGuideHost(onOpening: _closeSettingsModal),
       ],
     );
   }

@@ -158,61 +158,78 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
     final WorkspaceSettingsStatus workspaces = ref.watch(
       currentWorkspaceSettingsProvider,
     );
+    final double barHeight = ref.watch(barHeightProvider) + 3;
 
     return Positioned.fill(
       child: Focus(
         autofocus: true,
         focusNode: _focusNode,
-        child: ColoredBox(
-          color: SetupGuideColors.scrim,
-          child: Center(
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final double width = (constraints.maxWidth - 48).clamp(
-                  640,
-                  980,
-                );
-                final double height = (constraints.maxHeight - 40).clamp(
-                  500,
-                  600,
-                );
-
-                return _GuideCard(
-                  width: width,
-                  height: height,
-                  preview: SetupGuidePreview(
-                    step: _step,
-                    appearance: appearance,
-                    workspaces: workspaces,
-                  ),
-                  controls: SetupGuideControls(
-                    step: _step,
-                    appearance: appearance,
-                    workspaces: workspaces,
-                    accentPresets: _accentPresets,
-                    onStepSelected: _go,
-                    onBack: _back,
-                    onNext: _next,
-                    onSkip: widget.onSkipped,
-                    onOpacityPreview: _previewOpacity,
-                    onOpacityCommitted: _setOpacity,
-                    onAccentPreview: _previewAccent,
-                    onAccentCommitted: _setAccent,
-                    onPositionChanged: (AppearancePosition position) {
-                      ref
-                          .read(appearanceControllerProvider.notifier)
-                          .setPosition(position);
-                    },
-                    onWorkspaceStyleChanged: (WorkspaceIndicatorStyle style) {
-                      ref
-                          .read(workspaceSettingsControllerProvider.notifier)
-                          .setIndicatorStyle(style);
-                    },
-                  ),
-                );
-              },
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            Positioned(
+              top: appearance.position == AppearancePosition.top
+                  ? barHeight
+                  : 0,
+              bottom: appearance.position == AppearancePosition.bottom
+                  ? barHeight
+                  : 0,
+              left: 0,
+              right: 0,
+              child: const ColoredBox(
+                key: ValueKey<String>('setup-guide-scrim'),
+                color: SetupGuideColors.scrim,
+              ),
             ),
-          ),
+            Center(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double width = (constraints.maxWidth - 48).clamp(
+                    640,
+                    980,
+                  );
+                  final double height = (constraints.maxHeight - 40).clamp(
+                    500,
+                    600,
+                  );
+
+                  return _GuideCard(
+                    width: width,
+                    height: height,
+                    preview: SetupGuidePreview(
+                      step: _step,
+                      appearance: appearance,
+                      workspaces: workspaces,
+                    ),
+                    controls: SetupGuideControls(
+                      step: _step,
+                      appearance: appearance,
+                      workspaces: workspaces,
+                      accentPresets: _accentPresets,
+                      onStepSelected: _go,
+                      onBack: _back,
+                      onNext: _next,
+                      onSkip: widget.onSkipped,
+                      onOpacityPreview: _previewOpacity,
+                      onOpacityCommitted: _setOpacity,
+                      onAccentPreview: _previewAccent,
+                      onAccentCommitted: _setAccent,
+                      onPositionChanged: (AppearancePosition position) {
+                        ref
+                            .read(appearanceControllerProvider.notifier)
+                            .setPosition(position);
+                      },
+                      onWorkspaceStyleChanged: (WorkspaceIndicatorStyle style) {
+                        ref
+                            .read(workspaceSettingsControllerProvider.notifier)
+                            .setIndicatorStyle(style);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
