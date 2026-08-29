@@ -17,11 +17,13 @@ class SetupGuideOverlay extends ConsumerStatefulWidget {
   const SetupGuideOverlay({
     super.key,
     required this.launch,
+    this.onReady,
     required this.onFinished,
     required this.onSkipped,
   });
 
   final SetupLaunch launch;
+  final VoidCallback? onReady;
   final VoidCallback onFinished;
   final VoidCallback onSkipped;
 
@@ -46,6 +48,7 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
   late final LayerShellController _layerShellController;
   late final LayerShellRegionManager _regionManager;
   SetupStep _step = SetupStep.welcome;
+  bool _readyReported = false;
 
   @override
   void initState() {
@@ -61,14 +64,16 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
       unawaited(
         _layerShellController.setKeyboardMode(LayerShellKeyboardMode.exclusive),
       );
-      _updateRegion();
+      unawaited(_updateRegion());
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateRegion());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(_updateRegion()),
+    );
   }
 
   @override
@@ -86,24 +91,27 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
     super.dispose();
   }
 
-  void _updateRegion() {
+  Future<void> _updateRegion() async {
     if (!mounted) {
       return;
     }
 
     final Size size = MediaQuery.sizeOf(context);
-    unawaited(
-      _regionManager.setPassiveRegions(
-        owner: _regionOwner,
-        regions: <LayerShellMenuRegion>[
-          LayerShellMenuRegion(
-            rect: Offset.zero & size,
-            radius: BorderRadius.zero,
-          ),
-        ],
-        debugLabel: 'setup-guide-open',
-      ),
+    await _regionManager.setPassiveRegions(
+      owner: _regionOwner,
+      regions: <LayerShellMenuRegion>[
+        LayerShellMenuRegion(
+          rect: Offset.zero & size,
+          radius: BorderRadius.zero,
+        ),
+      ],
+      debugLabel: 'setup-guide-open',
     );
+
+    if (mounted && !_readyReported) {
+      _readyReported = true;
+      widget.onReady?.call();
+    }
   }
 
   void _go(SetupStep step) {

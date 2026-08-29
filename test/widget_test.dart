@@ -32,6 +32,7 @@ import 'package:hyprbaric/src/features/settings/settings_overlay_content.dart';
 import 'package:hyprbaric/src/features/settings/settings_overlay_layout.dart';
 import 'package:hyprbaric/src/features/settings/settings_rows.dart';
 import 'package:hyprbaric/src/features/settings/settings_tabs.dart';
+import 'package:hyprbaric/src/features/setup/setup_guide_state.dart';
 import 'package:hyprbaric/src/features/tray/tray_menu_panel.dart';
 import 'package:hyprbaric/src/features/tray/tray_strip.dart';
 import 'package:hyprbaric/src/hyprbaric.dart';
@@ -1913,6 +1914,66 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings hands input to a manually launched setup guide', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    final List<Map<String, Object?>> regionRequests = <Map<String, Object?>>[];
+    _setRegionMock((Object? message) {
+      regionRequests.add(_regionPayloadFromMessage(message));
+      return _pigeonSuccess();
+    });
+    _setKeyboardModeMock((Object? _) => _pigeonSuccess());
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+      debugDefaultTargetPlatformOverride = null;
+      _setRegionMock(null);
+      _setKeyboardModeMock(null);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          setupGuideAutomaticHostProvider.overrideWithValue(false),
+          setupStatusProvider.overrideWith(
+            (_) => Stream<SetupStatus>.value(
+              const SetupStatus(state: SetupState.complete),
+            ),
+          ),
+        ],
+        child: const Hyprbaric(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Controls'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('run-setup-guide')));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.text('GET STARTED'), findsOneWidget);
+    await tester.tap(find.text('GET STARTED'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Frosted, or flat?'), findsOneWidget);
+    final List<Object?> regions =
+        regionRequests.last['regions']! as List<Object?>;
+    expect(regions, hasLength(1));
+    final Map<String, Object?> guideRegion =
+        regions.single! as Map<String, Object?>;
+    expect(guideRegion['x'], 0);
+    expect(guideRegion['y'], 0);
+    expect(guideRegion['w']! as int, greaterThan(40));
+    expect(guideRegion['h']! as int, greaterThan(40));
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('settings content switches tabs and renders version footer', (

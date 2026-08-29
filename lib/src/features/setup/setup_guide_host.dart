@@ -11,10 +11,10 @@ import 'setup_guide_state.dart';
 
 /// Owns the setup journey for one Flutter view.
 class SetupGuideHost extends ConsumerStatefulWidget {
-  const SetupGuideHost({super.key, this.onOpening});
+  const SetupGuideHost({super.key, this.onReady});
 
-  /// Called before the guide opens so mutually exclusive overlays can close.
-  final VoidCallback? onOpening;
+  /// Called after the guide has claimed its native input region.
+  final VoidCallback? onReady;
 
   @override
   ConsumerState<SetupGuideHost> createState() => _SetupGuideHostState();
@@ -65,7 +65,6 @@ class _SetupGuideHostState extends ConsumerState<SetupGuideHost> {
 
   void _open(SetupLaunch launch) {
     if (mounted && _launch == null) {
-      widget.onOpening?.call();
       setState(() => _launch = launch);
     }
   }
@@ -85,6 +84,7 @@ class _SetupGuideHostState extends ConsumerState<SetupGuideHost> {
 
     return SetupGuideOverlay(
       launch: _launch!,
+      onReady: widget.onReady,
       onFinished: () => _complete(SetupOutcome.finished),
       onSkipped: () => _complete(SetupOutcome.skipped),
     );

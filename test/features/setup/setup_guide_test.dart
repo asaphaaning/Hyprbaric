@@ -66,7 +66,7 @@ void main() {
           Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              SetupGuideHost(onOpening: () => openingCount += 1),
+              SetupGuideHost(onReady: () => openingCount += 1),
               const _ManualLaunchButton(),
             ],
           ),
