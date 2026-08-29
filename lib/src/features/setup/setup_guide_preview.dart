@@ -51,29 +51,7 @@ class SetupGuidePreview extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      width: 9,
-                      height: 1.5,
-                      decoration: BoxDecoration(
-                        color: context.setupGuideAccent.withValues(alpha: .72),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'LIVE PREVIEW',
-                      style: setupMono(
-                        color: context.setupGuideAccentSoft.withValues(
-                          alpha: .76,
-                        ),
-                        size: 9,
-                        spacing: 1.7,
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 11),
                 Expanded(
                   child: Center(
                     child: Column(

@@ -116,6 +116,7 @@ void main() {
     );
     expect(tester.getSize(card), const Size(980, 600));
     expect(tester.getSize(preview), const Size(441, 600));
+    expect(find.text('LIVE PREVIEW'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('setup-guide-seam')),
       findsOneWidget,
