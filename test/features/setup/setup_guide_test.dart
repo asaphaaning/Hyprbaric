@@ -77,6 +77,57 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('setup-guide')), findsOneWidget);
   });
+
+  testWidgets('guide preserves the v6 split geometry and control vocabulary', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          setupGuideAutomaticHostProvider.overrideWithValue(true),
+          setupStatusProvider.overrideWith(
+            (_) => Stream<SetupStatus>.value(
+              const SetupStatus(state: SetupState.required),
+            ),
+          ),
+        ],
+        child: _surface(const SetupGuideHost()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder card = find.byKey(const ValueKey<String>('setup-guide'));
+    final Finder preview = find.byKey(
+      const ValueKey<String>('setup-guide-preview'),
+    );
+    expect(tester.getSize(card), const Size(980, 600));
+    expect(tester.getSize(preview), const Size(441, 600));
+    expect(
+      find.byKey(const ValueKey<String>('setup-guide-seam')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('GET STARTED'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('setup-guide-amount-slider')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('setup-guide-hue-slider')),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('CONTINUE'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('setup-guide-hue-slider')),
+      findsOneWidget,
+    );
+  });
 }
 
 Widget _surface(Widget child) {
