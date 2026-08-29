@@ -15,6 +15,7 @@ class AudioPanel extends StatelessWidget {
     required this.onSetVolume,
     required this.onSetMuted,
     required this.onSetBrightness,
+    required this.onOpenMixer,
   });
 
   final BorderRadius borderRadius;
@@ -23,6 +24,7 @@ class AudioPanel extends StatelessWidget {
   final void Function(AudioEndpointKind kind, int volume) onSetVolume;
   final void Function(AudioEndpointKind kind, {required bool muted}) onSetMuted;
   final ValueChanged<int> onSetBrightness;
+  final VoidCallback onOpenMixer;
 
   @override
   Widget build(BuildContext context) {
@@ -33,45 +35,67 @@ class AudioPanel extends StatelessWidget {
         snapshot != null &&
         (!snapshot.isAvailable || (output == null && input == null));
 
-    final int channelCount = <AudioEndpoint?>[
-      output,
-      input,
-    ].whereType<AudioEndpoint>().length;
-
-    return HyprPopoverPanel(
-      borderRadius: borderRadius,
-      constraints: const BoxConstraints(minWidth: 336, maxWidth: 336),
-      padding: EdgeInsets.zero,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          AudioMixerHeader(output: output),
-          AudioMixerStage(
-            output: output,
-            input: input,
-            brightnessStatus: brightnessStatus.asData?.value,
-            brightnessLoading: brightnessStatus.isLoading,
-            onSetVolume: onSetVolume,
-            onSetMuted: onSetMuted,
-            onSetBrightness: onSetBrightness,
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: RoundedSuperellipseBorder(borderRadius: borderRadius),
+        shadows: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0xA8000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
           ),
-          AudioMasterRail(output: output),
-          AudioMixerFooter(channelCount: channelCount),
-          if (status.isLoading) ...<Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: AudioMessage(message: 'Reading audio devices...'),
-            ),
-          ] else if (unavailable) ...<Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: AudioMessage(
-                message: snapshot.message ?? 'Audio controls are unavailable.',
-              ),
-            ),
-          ],
+          BoxShadow(color: Color(0x52000000), blurRadius: 2),
         ],
+      ),
+      child: HyprPopoverPanel(
+        borderRadius: borderRadius,
+        constraints: const BoxConstraints(minWidth: 336, maxWidth: 336),
+        padding: EdgeInsets.zero,
+        color: Colors.transparent,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                AudioMixerColors.chassisTop,
+                AudioMixerColors.chassisBottom,
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              AudioMixerHeader(output: output),
+              AudioMixerStage(
+                output: output,
+                input: input,
+                brightnessStatus: brightnessStatus.asData?.value,
+                brightnessLoading: brightnessStatus.isLoading,
+                onSetVolume: onSetVolume,
+                onSetMuted: onSetMuted,
+                onSetBrightness: onSetBrightness,
+              ),
+              AudioMasterRail(output: output),
+              AudioMixerFooter(onOpenMixer: onOpenMixer),
+              if (status.isLoading) ...<Widget>[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  child: AudioMessage(message: 'Reading audio devices...'),
+                ),
+              ] else if (unavailable) ...<Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  child: AudioMessage(
+                    message:
+                        snapshot.message ?? 'Audio controls are unavailable.',
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

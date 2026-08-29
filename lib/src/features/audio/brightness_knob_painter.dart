@@ -9,6 +9,7 @@ class BrightnessKnobPainter extends CustomPainter {
     required this.value,
     required this.enabled,
     required this.emphasized,
+    this.console = false,
   });
 
   static const double _startAngle = -135;
@@ -17,6 +18,7 @@ class BrightnessKnobPainter extends CustomPainter {
   final double value;
   final bool enabled;
   final bool emphasized;
+  final bool console;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -28,6 +30,11 @@ class BrightnessKnobPainter extends CustomPainter {
     final double sweep = _degreesToRadians(_sweepAngle);
     final double activeSweep = sweep * progress;
     final bool lit = enabled && progress > 0.001;
+
+    if (console) {
+      _paintConsoleKnob(canvas, center, size.width, progress, lit);
+      return;
+    }
 
     canvas.drawArc(
       arcRect,
@@ -76,6 +83,129 @@ class BrightnessKnobPainter extends CustomPainter {
     _paintTicks(canvas, center, size.width);
     _paintBezel(canvas, center, size.width, lit);
     _paintPointer(canvas, center, size.width, progress, lit);
+  }
+
+  void _paintConsoleKnob(
+    Canvas canvas,
+    Offset center,
+    double width,
+    double progress,
+    bool lit,
+  ) {
+    _paintDotRing(canvas, center, width, progress, lit);
+
+    final double bezelRadius = width * 0.35;
+    final Rect bezelRect = Rect.fromCircle(center: center, radius: bezelRadius);
+
+    canvas.drawCircle(
+      center.translate(width * 0.055, width * 0.085),
+      bezelRadius * 1.08,
+      Paint()
+        ..color = const Color(0xD9000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.10),
+    );
+    canvas.drawCircle(
+      center.translate(-width * 0.025, -width * 0.025),
+      bezelRadius + 5,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF55565A),
+            Color(0xFF2D2E31),
+            Color(0xFF17181A),
+          ],
+          stops: <double>[0, 0.38, 1],
+        ).createShader(bezelRect.inflate(5)),
+    );
+    canvas.drawCircle(
+      center,
+      bezelRadius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.12, -0.22),
+          radius: 0.96,
+          colors: <Color>[
+            Color(0xFF202125),
+            Color(0xFF18191C),
+            Color(0xFF0E0F12),
+          ],
+          stops: <double>[0, 0.62, 1],
+        ).createShader(bezelRect),
+    );
+    canvas.drawCircle(
+      center,
+      bezelRadius - 0.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xD9000000),
+    );
+    canvas.drawArc(
+      bezelRect.deflate(1),
+      _degreesToRadians(200),
+      _degreesToRadians(135),
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.white.withValues(alpha: 0.10),
+    );
+
+    final double angle = _degreesToRadians(
+      _startAngle + progress * _sweepAngle - 90,
+    );
+    final Offset direction = Offset(math.cos(angle), math.sin(angle));
+    canvas.drawLine(
+      center + direction * (bezelRadius * 0.48),
+      center + direction * (bezelRadius * 0.88),
+      Paint()
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 2
+        ..color = enabled
+            ? const Color(0xFFF4F4F2)
+            : HyprColors.textFaint.withValues(alpha: 0.55),
+    );
+  }
+
+  void _paintDotRing(
+    Canvas canvas,
+    Offset center,
+    double width,
+    double progress,
+    bool lit,
+  ) {
+    const int dots = 28;
+    final int activeDots = lit ? (progress * (dots - 1)).round() + 1 : 0;
+    final double radius = width * 0.567;
+
+    for (int index = 0; index < dots; index += 1) {
+      final double fraction = index / (dots - 1);
+      final double angle = _degreesToRadians(
+        _startAngle + fraction * _sweepAngle - 90,
+      );
+      final Offset dot =
+          center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      final bool active = index < activeDots;
+
+      if (active) {
+        canvas.drawCircle(
+          dot,
+          3.2,
+          Paint()
+            ..color = const Color(0x88F4D86D)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+      }
+
+      canvas.drawCircle(
+        dot,
+        1.65,
+        Paint()
+          ..color = active ? const Color(0xFFFFE79A) : const Color(0xFF303236),
+      );
+    }
   }
 
   void _paintTicks(Canvas canvas, Offset center, double width) {
@@ -214,6 +344,7 @@ class BrightnessKnobPainter extends CustomPainter {
   bool shouldRepaint(covariant BrightnessKnobPainter oldDelegate) {
     return value != oldDelegate.value ||
         enabled != oldDelegate.enabled ||
-        emphasized != oldDelegate.emphasized;
+        emphasized != oldDelegate.emphasized ||
+        console != oldDelegate.console;
   }
 }

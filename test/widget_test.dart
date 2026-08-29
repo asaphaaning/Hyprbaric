@@ -3008,9 +3008,11 @@ void main() {
   testWidgets('audio popup renders output and input controls', (
     WidgetTester tester,
   ) async {
+    final _RecordingRustDispatcher dispatcher = _RecordingRustDispatcher();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          rustCommandDispatcherProvider.overrideWith((ref) => dispatcher),
           audioStatusProvider.overrideWith(
             (ref) => Stream.value(_audioStatus()),
           ),
@@ -3037,8 +3039,9 @@ void main() {
     expect(find.text('MIC'), findsOneWidget);
     expect(find.text('EVO4 Analog Surround 4.0'), findsOneWidget);
     expect(find.text('MASTER'), findsOneWidget);
-    expect(find.text('2 CHANNELS'), findsOneWidget);
-    expect(find.text('HYPRBARIC AUDIO'), findsOneWidget);
+    expect(find.text('3 CH · 48 KHZ · 24-BIT'), findsOneWidget);
+    expect(find.text('PAVUCONTROL →'), findsOneWidget);
+    expect(find.text('▾'), findsOneWidget);
     expect(find.text('M'), findsNWidgets(2));
     expect(
       find.bySemanticsLabel('EVO4 Analog Surround 4.0 volume'),
@@ -3046,7 +3049,15 @@ void main() {
     );
     expect(find.bySemanticsLabel('Built-in Mic volume'), findsOneWidget);
     expect(find.text('pipewire'), findsNothing);
-    expect(find.text('pavucontrol ->'), findsNothing);
+
+    await tester.tap(find.text('PAVUCONTROL →'));
+    await tester.pumpAndSettle();
+
+    expect(
+      dispatcher.intents.map((RustIntent intent) => intent.debugLabel),
+      contains('app_launch:pavucontrol.desktop'),
+    );
+    expect(find.text('MIXER'), findsNothing);
   });
 
   testWidgets('audio panel renders mixer and brightness state directly', (
@@ -3063,6 +3074,7 @@ void main() {
           onSetVolume: (_, _) {},
           onSetMuted: (_, {required bool muted}) {},
           onSetBrightness: (_) {},
+          onOpenMixer: () {},
         ),
       ),
     );
@@ -3073,7 +3085,8 @@ void main() {
     expect(find.text('OUT'), findsOneWidget);
     expect(find.text('MIC'), findsOneWidget);
     expect(find.text('MASTER'), findsOneWidget);
-    expect(find.text('2 CHANNELS'), findsOneWidget);
+    expect(find.text('3 CH · 48 KHZ · 24-BIT'), findsOneWidget);
+    expect(find.text('PAVUCONTROL →'), findsOneWidget);
     expect(tester.getSize(find.byType(AudioPanel)).width, 336);
   });
 

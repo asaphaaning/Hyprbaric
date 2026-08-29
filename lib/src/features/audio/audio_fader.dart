@@ -99,7 +99,7 @@ class AudioFaderState extends State<AudioFader> {
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: SizedBox(
-          width: 52,
+          width: 41,
           height: 152,
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
@@ -164,7 +164,7 @@ class AudioDisabledFader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 52,
+      width: 41,
       height: 152,
       child: CustomPaint(
         painter: AudioFaderPainter(
@@ -193,7 +193,7 @@ class AudioFaderPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Rect meter = Rect.fromLTWH(1, 0, 10, size.height);
+    final Rect meter = Rect.fromLTWH(0, 0, 6, size.height);
     final RRect meterWell = RRect.fromRectAndRadius(
       meter,
       const Radius.circular(3),
@@ -237,7 +237,7 @@ class AudioFaderPainter extends CustomPainter {
       );
     }
 
-    final Rect track = Rect.fromLTWH(17, 0, 35, size.height);
+    final Rect track = Rect.fromLTWH(15, 0, 26, size.height);
     final Rect slot = Rect.fromCenter(
       center: track.center,
       width: 6,

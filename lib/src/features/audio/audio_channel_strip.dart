@@ -69,50 +69,57 @@ class AudioChannelStripState extends State<AudioChannelStrip> {
         : _previewEndpointId == value.id
         ? _previewVolume
         : value.volume;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Text(
-          widget.channel.label,
-          style: HyprTypography.compactMonoStrong.copyWith(
-            color: value == null || value.muted
-                ? HyprColors.textFaint
-                : AudioMixerColors.label,
-            fontSize: HyprTypography.size(9),
-            letterSpacing: 1.6,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 8, 6, 9),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            widget.channel.label,
+            textAlign: TextAlign.center,
+            style: HyprTypography.compactMonoStrong.copyWith(
+              color: value == null || value.muted
+                  ? HyprColors.textFaint
+                  : AudioMixerColors.label,
+              fontSize: HyprTypography.size(9),
+              letterSpacing: 1.6,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        if (value == null)
-          AudioDisabledFader(accent: widget.channel.accent)
-        else
-          AudioFader(
-            endpoint: value,
+          const SizedBox(height: 8),
+          if (value == null)
+            Center(child: AudioDisabledFader(accent: widget.channel.accent))
+          else
+            Center(
+              child: AudioFader(
+                endpoint: value,
+                accent: widget.channel.accent,
+                onPreviewVolume: (int volume) =>
+                    _setPreviewVolume(value, volume),
+                onSetVolume: widget.onSetVolume,
+              ),
+            ),
+          const SizedBox(height: 8),
+          AudioDbReadout(
+            value: displayedVolume,
+            muted: value?.muted ?? true,
             accent: widget.channel.accent,
-            onPreviewVolume: (int volume) => _setPreviewVolume(value, volume),
-            onSetVolume: widget.onSetVolume,
           ),
-        const SizedBox(height: 8),
-        AudioDbReadout(
-          value: displayedVolume,
-          muted: value?.muted ?? true,
-          accent: widget.channel.accent,
-        ),
-        const SizedBox(height: 7),
-        AudioMuteButton(
-          muted: value?.muted ?? true,
-          enabled: value != null,
-          label: value == null
-              ? widget.fallbackName
-              : value.muted
-              ? 'Unmute ${value.name}'
-              : 'Mute ${value.name}',
-          onPressed: value == null
-              ? null
-              : () => widget.onSetMuted(value.kind, muted: !value.muted),
-        ),
-      ],
+          const SizedBox(height: 7),
+          AudioMuteButton(
+            muted: value?.muted ?? true,
+            enabled: value != null,
+            label: value == null
+                ? widget.fallbackName
+                : value.muted
+                ? 'Unmute ${value.name}'
+                : 'Mute ${value.name}',
+            onPressed: value == null
+                ? null
+                : () => widget.onSetMuted(value.kind, muted: !value.muted),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -133,8 +140,8 @@ class AudioDbReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 58,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 3),
       decoration: BoxDecoration(
         color: AudioMixerColors.well,
         borderRadius: BorderRadius.circular(5),
@@ -216,7 +223,7 @@ class AudioMuteButton extends StatelessWidget {
               ),
             ),
             child: SizedBox(
-              width: 58,
+              width: double.infinity,
               height: 21,
               child: Center(
                 child: Text(

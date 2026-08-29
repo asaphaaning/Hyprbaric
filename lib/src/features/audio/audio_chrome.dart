@@ -26,24 +26,25 @@ extension AudioStatusView on AudioStatus {
 }
 
 abstract final class AudioMixerColors {
-  static const Color chassisTop = Color(0xE62B2D34);
-  static const Color chassisBottom = Color(0xF51B1D23);
-  static const Color deckTop = Color(0xFF3E3F43);
-  static const Color deckBottom = Color(0xFF303136);
-  static const Color console = Color(0xF725262B);
-  static const Color well = Color(0xB5121317);
-  static const Color rail = Color(0xFF17181D);
-  static const Color railBorder = Color(0x3AFFFFFF);
-  static const Color slot = Color(0xFF292B31);
+  static const Color chassisTop = Color(0xF0161A20);
+  static const Color chassisBottom = Color(0xFA0E1218);
+  static const Color deckTop = Color(0xFF242527);
+  static const Color deckMiddle = Color(0xFF202123);
+  static const Color deckBottom = Color(0xFF1C1D1F);
+  static const Color console = Color(0xFA090A0C);
+  static const Color well = Color(0xD907090C);
+  static const Color rail = Color(0xFF0C0E11);
+  static const Color railBorder = Color(0x1CFFFFFF);
+  static const Color slot = Color(0xFF24262A);
   static const Color slotBorder = Color(0x26000000);
   static const Color output = Color(0xFF3BCB7C);
-  static const Color input = Color(0xFF00B8C9);
+  static const Color input = Color(0xFF43D879);
   static const Color warning = Color(0xFFE0C34D);
   static const Color peak = Color(0xFFD45146);
-  static const Color handle = Color(0xFF323D4D);
-  static const Color handleFace = Color(0xFF677689);
-  static const Color handleLine = Color(0xFF93A2B6);
-  static const Color handleBorder = Color(0xFF17212D);
+  static const Color handle = Color(0xFF34363B);
+  static const Color handleFace = Color(0xFF55585E);
+  static const Color handleLine = Color(0xFFB9BDC4);
+  static const Color handleBorder = Color(0xFF16181C);
   static const Color accentBorder = HyprColors.accentSoft;
   static const Color label = Color(0x9A9AA5AF);
   static const Color quiet = Color(0xB6A2ACB7);

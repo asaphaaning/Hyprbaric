@@ -131,7 +131,7 @@ class BrightnessControlState extends State<BrightnessControl> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 28),
           knob,
         ],
       );

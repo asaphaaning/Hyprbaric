@@ -118,6 +118,7 @@ class BrightnessKnobState extends State<BrightnessKnob> {
           value: widget.value / 100,
           enabled: widget.enabled,
           emphasized: _hovered || _value.active,
+          console: widget.presentation == BrightnessKnobPresentation.console,
         ),
       ),
     );

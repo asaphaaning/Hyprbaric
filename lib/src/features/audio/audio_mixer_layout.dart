@@ -26,36 +26,53 @@ class AudioMixerHeader extends StatelessWidget {
               letterSpacing: 2.2,
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 9),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: AudioMixerColors.well,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0x52000000)),
-                boxShadow: const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x80000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                    blurStyle: BlurStyle.inner,
-                  ),
-                ],
-              ),
-              child: Text(
-                output?.name ?? 'No output device',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: HyprTypography.compactMonoStrong.copyWith(
-                  color: output == null
-                      ? HyprColors.textFaint
-                      : AudioMixerColors.input,
-                  fontSize: HyprTypography.size(9.5),
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.3,
+          const Spacer(),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 176),
+              child: Container(
+                height: 26,
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                decoration: BoxDecoration(
+                  color: AudioMixerColors.well,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0x52000000)),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x80000000),
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                      blurStyle: BlurStyle.inner,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        output?.name ?? 'No output device',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: HyprTypography.compactMonoStrong.copyWith(
+                          color: output == null
+                              ? HyprColors.textFaint
+                              : const Color(0xFFD1EEF0),
+                          fontSize: HyprTypography.size(9.5),
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      '▾',
+                      style: HyprTypography.compactMonoStrong.copyWith(
+                        color: HyprColors.textFaint,
+                        fontSize: HyprTypography.size(8),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -90,7 +107,7 @@ class AudioMixerStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 411,
+      height: 457,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -101,33 +118,37 @@ class AudioMixerStage extends StatelessWidget {
             child: _BrightnessDeck(),
           ),
           Positioned(
-            top: 98,
+            top: 117,
             left: 12,
             right: 12,
-            height: 313,
+            height: 340,
             child: ClipPath(
               clipper: const _ConsoleNotchClipper(),
               child: ColoredBox(
                 color: AudioMixerColors.console,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(42, 57, 42, 12),
+                  padding: const EdgeInsets.fromLTRB(12, 74, 12, 12),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      AudioChannelStrip(
-                        channel: AudioMixerChannel.output,
-                        endpoint: output,
-                        fallbackName: 'No output device',
-                        onSetVolume: onSetVolume,
-                        onSetMuted: onSetMuted,
+                      Expanded(
+                        child: AudioChannelStrip(
+                          channel: AudioMixerChannel.output,
+                          endpoint: output,
+                          fallbackName: 'No output device',
+                          onSetVolume: onSetVolume,
+                          onSetMuted: onSetMuted,
+                        ),
                       ),
-                      AudioChannelStrip(
-                        channel: AudioMixerChannel.input,
-                        endpoint: input,
-                        fallbackName: 'No input device',
-                        onSetVolume: onSetVolume,
-                        onSetMuted: onSetMuted,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AudioChannelStrip(
+                          channel: AudioMixerChannel.input,
+                          endpoint: input,
+                          fallbackName: 'No input device',
+                          onSetVolume: onSetVolume,
+                          onSetMuted: onSetMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -136,7 +157,7 @@ class AudioMixerStage extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 12,
+            top: 13,
             left: 0,
             right: 0,
             child: BrightnessControl(
@@ -159,7 +180,7 @@ class _BrightnessDeck extends StatelessWidget {
   Widget build(BuildContext context) {
     return const CustomPaint(
       painter: _BrightnessDeckPainter(),
-      child: SizedBox(height: 132),
+      child: SizedBox(height: 151),
     );
   }
 }
@@ -173,15 +194,20 @@ class _BrightnessDeckPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: <Color>[AudioMixerColors.deckTop, AudioMixerColors.deckBottom],
+        colors: <Color>[
+          AudioMixerColors.deckTop,
+          AudioMixerColors.deckMiddle,
+          AudioMixerColors.deckBottom,
+        ],
+        stops: <double>[0, 0.48, 1],
       ).createShader(Offset.zero & size);
     final RRect deck = RRect.fromRectAndCorners(
-      Rect.fromLTWH(0, 0, size.width, 112),
+      Rect.fromLTWH(0, 0, size.width, 131),
       topLeft: const Radius.circular(16),
       topRight: const Radius.circular(16),
     );
     canvas.drawRRect(deck, paint);
-    canvas.drawCircle(Offset(size.width / 2, 103), 74, paint);
+    canvas.drawCircle(Offset(size.width / 2, 122), 74.5, paint);
     canvas.drawLine(
       const Offset(12, 0),
       Offset(size.width - 12, 0),
@@ -230,7 +256,7 @@ class AudioMasterRail extends StatelessWidget {
     final int volume = output?.volume ?? 0;
     final bool muted = output?.muted ?? true;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(color: Color(0x82000000)),
@@ -250,7 +276,7 @@ class AudioMasterRail extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: SizedBox(
-              height: 10,
+              height: 8,
               child: CustomPaint(
                 painter: AudioMasterMeterPainter(
                   value: muted ? 0 : volume / 100,
@@ -297,7 +323,7 @@ class AudioMasterMeterPainter extends CustomPainter {
       const Radius.circular(3),
     );
     canvas.drawRRect(well, Paint()..color = AudioMixerColors.rail);
-    const int segments = 24;
+    const int segments = 32;
     const double gap = 1.5;
     final double width = (size.width - 4 - gap * (segments - 1)) / segments;
     final int active = (value.clamp(0, 1) * segments).round();
@@ -326,34 +352,59 @@ class AudioMasterMeterPainter extends CustomPainter {
       value != oldDelegate.value;
 }
 
-/// Mixer channel count and product signature.
+/// Reference audio format and external mixer affordance.
 class AudioMixerFooter extends StatelessWidget {
-  const AudioMixerFooter({super.key, required this.channelCount});
+  const AudioMixerFooter({super.key, required this.onOpenMixer});
 
-  final int channelCount;
+  final VoidCallback onOpenMixer;
 
   @override
   Widget build(BuildContext context) {
-    final String label = channelCount == 1 ? 'CHANNEL' : 'CHANNELS';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 9, 14, 11),
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 5),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(
-            '$channelCount $label',
-            style: HyprTypography.compactMonoStrong.copyWith(
-              color: HyprColors.textFaint,
-              fontSize: HyprTypography.size(8.5),
-              letterSpacing: 0.8,
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '3 CH · 48 KHZ · 24-BIT',
+                style: HyprTypography.compactMonoStrong.copyWith(
+                  color: HyprColors.textFaint,
+                  fontSize: HyprTypography.size(8.5),
+                  letterSpacing: 0.8,
+                ),
+              ),
             ),
           ),
-          Text(
-            'HYPRBARIC AUDIO',
-            style: HyprTypography.compactMonoStrong.copyWith(
-              color: AudioMixerColors.label,
-              fontSize: HyprTypography.size(8.5),
-              letterSpacing: 1.2,
+          const SizedBox(width: 18),
+          Flexible(
+            child: Semantics(
+              container: true,
+              button: true,
+              label: 'Open pavucontrol',
+              child: InkWell(
+                onTap: onOpenMixer,
+                borderRadius: BorderRadius.circular(4),
+                hoverColor: const Color(0x0FFFFFFF),
+                splashColor: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'PAVUCONTROL →',
+                      style: HyprTypography.compactMonoStrong.copyWith(
+                        color: AudioMixerColors.label,
+                        fontSize: HyprTypography.size(8.5),
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

@@ -9,6 +9,7 @@ import '../features/controls/controls_panel.dart';
 import '../features/network/network_panel.dart';
 import '../features/power/battery_chip.dart';
 import '../features/power/power_panel.dart';
+import '../features/rust_commands.dart';
 import '../features/tray/tray_menu_panel.dart';
 import '../features/tray/tray_strip.dart';
 import '../state/providers.dart';
@@ -245,6 +246,16 @@ class RightCluster extends ConsumerWidget {
                                 onSetVolume: onSetAudioVolume,
                                 onSetMuted: onSetAudioMuted,
                                 onSetBrightness: onSetBrightness,
+                                onOpenMixer: () {
+                                  ref
+                                      .read(rustCommandDispatcherProvider)
+                                      .dispatch(
+                                        const LauncherIntent.launch(
+                                          'pavucontrol.desktop',
+                                        ),
+                                      );
+                                  controller.dismiss();
+                                },
                               );
                             },
                       );
