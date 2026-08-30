@@ -311,7 +311,6 @@ class AudioMasterRail extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       decoration: const BoxDecoration(
         border: Border(
-          top: BorderSide(color: Color(0x82000000)),
           bottom: BorderSide(color: Color(0x24000000)),
         ),
       ),
