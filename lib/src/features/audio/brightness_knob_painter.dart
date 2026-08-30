@@ -92,131 +92,176 @@ class BrightnessKnobPainter extends CustomPainter {
     double progress,
     bool lit,
   ) {
-    final double bezelRadius = width * 0.35;
-    final Rect bezelRect = Rect.fromCircle(center: center, radius: bezelRadius);
+    final double faceRadius = width * 0.35;
+    final double lipRadius = faceRadius + 5;
 
     _paintLampSpill(canvas, center, width, progress, lit);
-
-    canvas.drawCircle(
-      center.translate(-width * 0.035, -width * 0.045),
-      bezelRadius + 4,
-      Paint()
-        ..color = const Color(0x24484A4F)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.065),
-    );
-    canvas.drawCircle(
-      center.translate(width * 0.055, width * 0.085),
-      bezelRadius + 4,
-      Paint()
-        ..color = const Color(0xE6000000)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.12),
-    );
-    canvas.drawCircle(
-      center,
-      bezelRadius + 5,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0xFF4E5054),
-            Color(0xFF3A3C40),
-            Color(0xFF252629),
-            Color(0xFF17181A),
-          ],
-          stops: <double>[0, 0.30, 0.68, 1],
-        ).createShader(bezelRect.inflate(5)),
-    );
-    canvas.drawCircle(
-      center,
-      bezelRadius,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, -0.12),
-          radius: 1.04,
-          colors: <Color>[
-            Color(0xFF16171A),
-            Color(0xFF1A1B1E),
-            Color(0xFF242529),
-            Color(0xFF292A2E),
-          ],
-          stops: <double>[0, 0.48, 0.88, 1],
-        ).createShader(bezelRect),
-    );
-    canvas.drawCircle(
-      center,
-      bezelRadius,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, 1.45),
-          radius: 1.05,
-          colors: <Color>[
-            Color(0x58484A4F),
-            Color(0x243E4045),
-            Color(0x00383A3E),
-          ],
-          stops: <double>[0, 0.42, 0.74],
-        ).createShader(bezelRect),
-    );
-    canvas.drawCircle(
-      center,
-      bezelRadius,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, -1.15),
-          radius: 1.0,
-          colors: <Color>[
-            Color(0x78000000),
-            Color(0x30000000),
-            Color(0x00000000),
-          ],
-          stops: <double>[0, 0.35, 0.74],
-        ).createShader(bezelRect),
-    );
-    canvas.drawCircle(
-      center,
-      bezelRadius - 0.5,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = const Color(0xD9000000),
-    );
-    canvas.drawArc(
-      bezelRect.deflate(0.75),
-      math.pi,
-      math.pi,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: 0.13),
-    );
-    canvas.drawArc(
-      bezelRect.deflate(0.75),
-      0,
-      math.pi,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = Colors.black.withValues(alpha: 0.52),
-    );
-
+    _paintConsoleShadow(canvas, center, width, lipRadius);
+    _paintConsoleLip(canvas, center, lipRadius, faceRadius);
+    _paintConsoleFace(canvas, center, faceRadius);
     _paintDotRing(canvas, center, width, progress, lit);
 
     final double angle = _degreesToRadians(
       _startAngle + progress * _sweepAngle - 90,
     );
     final Offset direction = Offset(math.cos(angle), math.sin(angle));
+    final Offset pointerStart = center + direction * (faceRadius * 0.49);
+    final Offset pointerEnd = center + direction * (faceRadius * 0.87);
     canvas.drawLine(
-      center + direction * (bezelRadius * 0.48),
-      center + direction * (bezelRadius * 0.88),
+      pointerStart.translate(0.6, 0.8),
+      pointerEnd.translate(0.6, 0.8),
+      Paint()
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 3
+        ..color = const Color(0xA6000000),
+    );
+    canvas.drawLine(
+      pointerStart,
+      pointerEnd,
       Paint()
         ..strokeCap = StrokeCap.round
         ..strokeWidth = 2
         ..color = enabled
-            ? const Color(0xFFF4F4F2)
+            ? const Color(0xFFF7F7F4)
             : HyprColors.textFaint.withValues(alpha: 0.55),
+    );
+  }
+
+  void _paintConsoleShadow(
+    Canvas canvas,
+    Offset center,
+    double width,
+    double lipRadius,
+  ) {
+    canvas.drawCircle(
+      center.translate(width * 0.075, width * 0.105),
+      lipRadius - 1,
+      Paint()
+        ..color = const Color(0xD9000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.095),
+    );
+    canvas.drawCircle(
+      center.translate(-width * 0.045, -width * 0.05),
+      lipRadius - 1,
+      Paint()
+        ..color = const Color(0x244F5155)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.06),
+    );
+  }
+
+  void _paintConsoleLip(
+    Canvas canvas,
+    Offset center,
+    double lipRadius,
+    double faceRadius,
+  ) {
+    final Rect lipRect = Rect.fromCircle(center: center, radius: lipRadius);
+    final Path annulus = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addOval(lipRect)
+      ..addOval(Rect.fromCircle(center: center, radius: faceRadius));
+
+    canvas.drawPath(
+      annulus,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF424448),
+            Color(0xFF333438),
+            Color(0xFF202124),
+            Color(0xFF0D0E10),
+          ],
+          stops: <double>[0, 0.30, 0.68, 1],
+        ).createShader(lipRect),
+    );
+    canvas.drawCircle(
+      center,
+      lipRadius - 0.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0x72000000),
+    );
+  }
+
+  void _paintConsoleFace(Canvas canvas, Offset center, double faceRadius) {
+    final Rect faceRect = Rect.fromCircle(center: center, radius: faceRadius);
+
+    canvas.drawCircle(
+      center,
+      faceRadius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0, -0.12),
+          radius: 1.05,
+          colors: <Color>[
+            Color(0xFF161719),
+            Color(0xFF1A1B1D),
+            Color(0xFF232427),
+            Color(0xFF2A2B2E),
+          ],
+          stops: <double>[0, 0.48, 0.88, 1],
+        ).createShader(faceRect),
+    );
+    canvas.drawCircle(
+      center,
+      faceRadius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0, 1.25),
+          radius: 1.04,
+          colors: <Color>[
+            Color(0x524E5054),
+            Color(0x243C3E42),
+            Color(0x0036383B),
+          ],
+          stops: <double>[0, 0.42, 0.76],
+        ).createShader(faceRect),
+    );
+    canvas.drawCircle(
+      center,
+      faceRadius,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0, -1.18),
+          radius: 1.0,
+          colors: <Color>[
+            Color(0x9C000000),
+            Color(0x42000000),
+            Color(0x00000000),
+          ],
+          stops: <double>[0, 0.34, 0.72],
+        ).createShader(faceRect),
+    );
+    canvas.drawCircle(
+      center,
+      faceRadius - 0.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xCC000000),
+    );
+    canvas.drawArc(
+      faceRect.deflate(0.75),
+      math.pi,
+      math.pi,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = const Color(0xA8000000),
+    );
+    canvas.drawArc(
+      faceRect.deflate(0.75),
+      0,
+      math.pi,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0x4D8C8E92),
     );
   }
 
@@ -232,6 +277,20 @@ class BrightnessKnobPainter extends CustomPainter {
     }
 
     final Rect spill = Rect.fromCircle(center: center, radius: width * 0.567);
+    canvas.drawCircle(
+      center.translate(-width * 0.08, width * 0.04),
+      width * 0.48,
+      Paint()
+        ..shader = RadialGradient(
+          colors: <Color>[
+            const Color(0x26F0D46C).withValues(alpha: 0.12 * progress),
+            const Color(0x0FF0D46C).withValues(alpha: 0.05 * progress),
+            Colors.transparent,
+          ],
+          stops: const <double>[0, 0.58, 1],
+        ).createShader(Rect.fromCircle(center: center, radius: width * 0.48))
+        ..blendMode = BlendMode.plus,
+    );
     canvas.drawArc(
       spill,
       _degreesToRadians(_startAngle - 90),
@@ -240,10 +299,12 @@ class BrightnessKnobPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = width * 0.18
-        ..color = const Color(0x30F0D46C)
+        ..strokeWidth = width * 0.14
+        ..color = const Color(
+          0x30F0D46C,
+        ).withValues(alpha: 0.10 + progress * 0.08)
         ..blendMode = BlendMode.plus
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.10),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.075),
     );
   }
 

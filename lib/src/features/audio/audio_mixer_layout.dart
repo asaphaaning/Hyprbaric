@@ -15,7 +15,7 @@ class AudioMixerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 11, 14, 10),
+      padding: const EdgeInsets.fromLTRB(16, 11, 16, 10),
       child: Row(
         children: <Widget>[
           Text(
@@ -106,28 +106,32 @@ class AudioMixerStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double illumination = brightnessStatus?.isAvailable ?? false
+        ? (brightnessStatus!.displayValue / 100).clamp(0, 1).toDouble()
+        : 0;
+
     return SizedBox(
       height: 457,
       child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
-          const Positioned(
+          Positioned(
             top: 0,
-            left: 12,
-            right: 12,
-            child: _BrightnessDeck(),
+            left: 16,
+            right: 16,
+            child: _BrightnessDeck(illumination: illumination),
           ),
           Positioned(
             top: 117,
-            left: 12,
-            right: 12,
+            left: 16,
+            right: 16,
             height: 340,
             child: ClipPath(
               clipper: const _ConsoleNotchClipper(),
               child: ColoredBox(
                 color: AudioMixerColors.console,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 74, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 74, 14, 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -174,23 +178,28 @@ class AudioMixerStage extends StatelessWidget {
 }
 
 class _BrightnessDeck extends StatelessWidget {
-  const _BrightnessDeck();
+  const _BrightnessDeck({required this.illumination});
+
+  final double illumination;
 
   @override
   Widget build(BuildContext context) {
-    return const CustomPaint(
-      painter: _BrightnessDeckPainter(),
-      child: SizedBox(height: 151),
+    return CustomPaint(
+      painter: _BrightnessDeckPainter(illumination: illumination),
+      child: const SizedBox(height: 151),
     );
   }
 }
 
 class _BrightnessDeckPainter extends CustomPainter {
-  const _BrightnessDeckPainter();
+  const _BrightnessDeckPainter({required this.illumination});
+
+  final double illumination;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
+    final Rect bounds = Offset.zero & size;
+    final Paint deckPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
@@ -200,14 +209,56 @@ class _BrightnessDeckPainter extends CustomPainter {
           AudioMixerColors.deckBottom,
         ],
         stops: <double>[0, 0.48, 1],
-      ).createShader(Offset.zero & size);
+      ).createShader(bounds);
     final RRect deck = RRect.fromRectAndCorners(
       Rect.fromLTWH(0, 0, size.width, 131),
       topLeft: const Radius.circular(16),
       topRight: const Radius.circular(16),
     );
-    canvas.drawRRect(deck, paint);
-    canvas.drawCircle(Offset(size.width / 2, 122), 74.5, paint);
+    final Path silhouette = Path()
+      ..addRRect(deck)
+      ..addOval(
+        Rect.fromCircle(center: Offset(size.width / 2, 122), radius: 74.5),
+      );
+
+    canvas.save();
+    canvas.clipPath(silhouette);
+    canvas.drawRect(bounds, deckPaint);
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.42, -0.92),
+          radius: 1.1,
+          colors: <Color>[
+            Color(0x16FFFFFF),
+            Color(0x08FFFFFF),
+            Colors.transparent,
+          ],
+          stops: <double>[0, 0.42, 1],
+        ).createShader(bounds),
+    );
+
+    if (illumination > 0) {
+      final Offset lampCenter = Offset(size.width / 2 - 10, 114);
+      final Rect lampBounds = Rect.fromCircle(center: lampCenter, radius: 96);
+      canvas.drawCircle(
+        lampCenter,
+        96,
+        Paint()
+          ..shader = RadialGradient(
+            colors: <Color>[
+              const Color(0x18F2D77A).withValues(alpha: 0.09 * illumination),
+              const Color(0x0CF2D77A).withValues(alpha: 0.045 * illumination),
+              Colors.transparent,
+            ],
+            stops: const <double>[0, 0.48, 1],
+          ).createShader(lampBounds)
+          ..blendMode = BlendMode.plus,
+      );
+    }
+
+    canvas.restore();
     canvas.drawLine(
       const Offset(12, 0),
       Offset(size.width - 12, 0),
@@ -218,7 +269,8 @@ class _BrightnessDeckPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BrightnessDeckPainter oldDelegate) => false;
+  bool shouldRepaint(_BrightnessDeckPainter oldDelegate) =>
+      illumination != oldDelegate.illumination;
 }
 
 class _ConsoleNotchClipper extends CustomClipper<Path> {
@@ -256,7 +308,7 @@ class AudioMasterRail extends StatelessWidget {
     final int volume = output?.volume ?? 0;
     final bool muted = output?.muted ?? true;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(color: Color(0x82000000)),
@@ -361,7 +413,7 @@ class AudioMixerFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 5),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Row(
         children: <Widget>[
           Expanded(
