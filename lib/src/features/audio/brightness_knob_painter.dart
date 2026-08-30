@@ -172,28 +172,41 @@ class BrightnessKnobPainter extends CustomPainter {
       ..addOval(lipRect)
       ..addOval(Rect.fromCircle(center: center, radius: faceRadius));
 
-    canvas.drawPath(annulus, Paint()..color = const Color(0xFF25272A));
+    canvas.drawPath(
+      annulus,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF3B3D42),
+            Color(0xFF303237),
+            Color(0xFF1B1C1F),
+            Color(0xFF0B0C0E),
+          ],
+          stops: <double>[0, 0.3, 0.7, 1],
+        ).createShader(lipRect),
+    );
     canvas.drawCircle(
       center,
       lipRadius - 0.5,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = const Color(0x72000000),
-    );
-    canvas.drawCircle(
-      center,
-      faceRadius + 0.5,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.25
-        ..color = const Color(0xD6090A0C),
+        ..strokeWidth = 0.75
+        ..color = const Color(0x42000000),
     );
   }
 
   void _paintConsoleFace(Canvas canvas, Offset center, double faceRadius) {
     final Rect faceRect = Rect.fromCircle(center: center, radius: faceRadius);
 
+    canvas.drawCircle(
+      center.translate(0, 0.5),
+      faceRadius + 0.25,
+      Paint()
+        ..color = const Color(0x61000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4),
+    );
     canvas.drawCircle(
       center,
       faceRadius,
@@ -202,10 +215,10 @@ class BrightnessKnobPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Color(0xFF0B0C0E),
-            Color(0xFF111215),
-            Color(0xFF1D1F22),
-            Color(0xFF2B2D31),
+            Color(0xFF101113),
+            Color(0xFF121316),
+            Color(0xFF1B1D20),
+            Color(0xFF25272A),
           ],
           stops: <double>[0, 0.42, 0.76, 1],
         ).createShader(faceRect),
@@ -218,9 +231,9 @@ class BrightnessKnobPainter extends CustomPainter {
           center: Alignment(-0.24, 1.15),
           radius: 1.15,
           colors: <Color>[
-            Color(0x5C55585D),
-            Color(0x303E4146),
-            Color(0x0D33363A),
+            Color(0x303D3F43),
+            Color(0x1836383B),
+            Color(0x08323538),
             Color(0x00303336),
           ],
           stops: <double>[0, 0.34, 0.62, 0.84],
@@ -234,20 +247,12 @@ class BrightnessKnobPainter extends CustomPainter {
           center: Alignment(0.08, -1.05),
           radius: 1.16,
           colors: <Color>[
-            Color(0xB8000000),
-            Color(0x52000000),
+            Color(0x72000000),
+            Color(0x28000000),
             Color(0x00000000),
           ],
           stops: <double>[0, 0.38, 0.78],
         ).createShader(faceRect),
-    );
-    canvas.drawCircle(
-      center,
-      faceRadius - 0.5,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = const Color(0xE007080A),
     );
   }
 
