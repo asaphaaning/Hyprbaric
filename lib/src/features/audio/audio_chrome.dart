@@ -31,7 +31,7 @@ abstract final class AudioMixerColors {
   static const Color deckTop = Color(0xFF242527);
   static const Color deckMiddle = Color(0xFF202123);
   static const Color deckBottom = Color(0xFF1C1D1F);
-  static const Color console = Color(0xF51D1E20);
+  static const Color console = Color(0xF5090A0C);
   static const Color well = Color(0xD907090C);
   static const Color rail = Color(0xFF0C0E11);
   static const Color railBorder = Color(0x1CFFFFFF);
