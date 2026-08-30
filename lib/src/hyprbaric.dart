@@ -294,7 +294,7 @@ class _BarViewState extends ConsumerState<_BarView> {
         ?.value;
     switch (status) {
       case BrightnessStatusAvailable(:final value):
-        _setBrightness(value + delta);
+        _setBrightness(value + delta, feedback: BrightnessFeedback.osd);
       case _:
         return;
     }
@@ -487,8 +487,13 @@ class _BarViewState extends ConsumerState<_BarView> {
     ref.read(audioControllerProvider.notifier).setMuted(kind, muted: muted);
   }
 
-  void _setBrightness(int value) {
-    ref.read(audioControllerProvider.notifier).setBrightness(value);
+  void _setBrightness(
+    int value, {
+    BrightnessFeedback feedback = BrightnessFeedback.none,
+  }) {
+    ref
+        .read(audioControllerProvider.notifier)
+        .setBrightness(value, feedback: feedback);
   }
 
   void _setPowerProfile(PowerProfile profile) {

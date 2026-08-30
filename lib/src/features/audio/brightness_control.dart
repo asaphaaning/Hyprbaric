@@ -57,7 +57,8 @@ class BrightnessControlState extends State<BrightnessControl> {
     _commits.preview(level);
     final int? committed = _commits.commit(force: force);
     if (committed != null) {
-      widget.onSetBrightness(committed);
+      final ValueChanged<int> commit = widget.onSetBrightness;
+      WidgetsBinding.instance.addPostFrameCallback((_) => commit(committed));
     }
   }
 

@@ -6,6 +6,15 @@ import '../rust_commands.dart';
 
 part 'audio_controller.g.dart';
 
+/// Visual feedback requested for a brightness adjustment.
+enum BrightnessFeedback {
+  /// The control already presents the new value directly.
+  none,
+
+  /// Present the global brightness on-screen display.
+  osd,
+}
+
 @Riverpod(keepAlive: true)
 class AudioController extends _$AudioController {
   @override
@@ -36,11 +45,16 @@ class AudioController extends _$AudioController {
         .dispatch(AudioIntent.setMuted(kind: kind, muted: muted));
   }
 
-  void setBrightness(int value) {
+  void setBrightness(
+    int value, {
+    BrightnessFeedback feedback = BrightnessFeedback.osd,
+  }) {
     final int clampedValue = value.clamp(0, 100).toInt();
-    ref
-        .read(transientOverlayProvider.notifier)
-        .showBrightnessOsd(value: clampedValue);
+    if (feedback == BrightnessFeedback.osd) {
+      ref
+          .read(transientOverlayProvider.notifier)
+          .showBrightnessOsd(value: clampedValue);
+    }
     ref
         .read(rustCommandDispatcherProvider)
         .dispatch(BrightnessIntent.setLevel(value: clampedValue));

@@ -9,7 +9,6 @@ void main() {
       value: 0.75,
       lampValue: 0.74,
       enabled: true,
-      emphasized: false,
       console: true,
     );
 
@@ -19,7 +18,6 @@ void main() {
           value: 0.75,
           lampValue: 0.75,
           enabled: true,
-          emphasized: false,
           console: true,
         ),
       ),

@@ -100,6 +100,10 @@ enum Work {
     PollBacklight,
     DiscoveryFinished(DiscoveryMode, Result<Vec<Device>, Error>),
     Set(Target, Percent),
+    WriteReady {
+        generation: u64,
+        request: WriteRequest,
+    },
     WriteFinished {
         device_id: DeviceId,
         generation: u64,
@@ -108,6 +112,66 @@ enum Work {
     },
     Resync(DeviceId),
     ResyncFinished(Result<Device, Error>),
+}
+
+/// The latest value waiting to cross one brightness backend boundary.
+#[derive(Clone, Debug)]
+struct WriteRequest {
+    device: Device,
+    value: Percent,
+}
+
+/// Per-device write lifecycle used to serialize and coalesce hardware access.
+#[derive(Debug)]
+enum WriteState {
+    /// The debounce window is still open.
+    Waiting { generation: u64 },
+    /// One backend write is active and at most one newer value is retained.
+    Running {
+        generation: u64,
+        next: Option<WriteRequest>,
+    },
+}
+
+impl WriteState {
+    const fn waiting(generation: u64) -> Self {
+        Self::Waiting { generation }
+    }
+
+    fn queue(&mut self, request: WriteRequest) -> Result<(), WriteRequest> {
+        match self {
+            Self::Waiting { .. } => Err(request),
+            Self::Running { next, .. } => {
+                *next = Some(request);
+                Ok(())
+            }
+        }
+    }
+
+    fn begin(&mut self, generation: u64) -> bool {
+        match self {
+            Self::Waiting {
+                generation: waiting,
+            } if *waiting == generation => {
+                *self = Self::Running {
+                    generation,
+                    next: None,
+                };
+                true
+            }
+            Self::Waiting { .. } | Self::Running { .. } => false,
+        }
+    }
+
+    fn finish(self, generation: u64) -> Result<Option<WriteRequest>, Self> {
+        match self {
+            Self::Running {
+                generation: running,
+                next,
+            } if running == generation => Ok(next),
+            state @ (Self::Waiting { .. } | Self::Running { .. }) => Err(state),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -125,7 +189,7 @@ struct Actor {
     config: Configuration,
     snapshot: Snapshot,
     running: Running,
-    writes: HashMap<DeviceId, u64>,
+    writes: HashMap<DeviceId, WriteState>,
     next_generation: u64,
     last_error: Option<String>,
 }
@@ -232,6 +296,10 @@ impl Actor {
             Work::PollBacklight => self.start_discovery(DiscoveryMode::Backlight),
             Work::DiscoveryFinished(mode, result) => self.finish_discovery(mode, result),
             Work::Set(target, value) => self.set(target, value),
+            Work::WriteReady {
+                generation,
+                request,
+            } => self.start_write(generation, request),
             Work::WriteFinished {
                 device_id,
                 generation,
@@ -306,31 +374,70 @@ impl Actor {
 
     #[instrument(skip(self))]
     fn schedule_write(&mut self, device: Device, value: Percent) {
+        let mut request = WriteRequest { device, value };
+        let device_id = request.device.id.clone();
+
+        if let Some(state) = self.writes.get_mut(&device_id) {
+            match state.queue(request) {
+                Ok(()) => return,
+                Err(returned) => request = returned,
+            }
+        }
+
         self.next_generation = self.next_generation.wrapping_add(1);
         let generation = self.next_generation;
-        self.writes.insert(device.id.clone(), generation);
+        self.writes
+            .insert(device_id, WriteState::waiting(generation));
 
-        let delay = match device.kind {
+        let delay = match request.device.kind {
             DeviceKind::Backlight => Duration::ZERO,
             DeviceKind::DdcCi => self.config.ddc_write_debounce.duration(),
         };
-        let command = PublicCommand::SetLevel { value };
-        let controller = self.controller.clone();
         let commands = self.commands.clone();
         tokio::spawn(async move {
             if !delay.is_zero() {
                 sleep(delay).await;
             }
-            let device_id = device.id.clone();
-            let result = controller.set_brightness(&device, value).await;
-            let _ = commands
-                .send(Work::WriteFinished {
-                    device_id,
-                    generation,
-                    command,
-                    result,
-                })
+            drop(
+                commands
+                    .send(Work::WriteReady {
+                        generation,
+                        request,
+                    })
+                    .await,
+            );
+        });
+    }
+
+    #[instrument(skip(self, request))]
+    fn start_write(&mut self, generation: u64, request: WriteRequest) {
+        let device_id = request.device.id.clone();
+        let Some(state) = self.writes.get_mut(&device_id) else {
+            return;
+        };
+        if !state.begin(generation) {
+            return;
+        }
+
+        let controller = self.controller.clone();
+        let commands = self.commands.clone();
+        tokio::spawn(async move {
+            let command = PublicCommand::SetLevel {
+                value: request.value,
+            };
+            let result = controller
+                .set_brightness(&request.device, request.value)
                 .await;
+            drop(
+                commands
+                    .send(Work::WriteFinished {
+                        device_id,
+                        generation,
+                        command,
+                        result,
+                    })
+                    .await,
+            );
         });
     }
 
@@ -342,14 +449,28 @@ impl Actor {
         command: PublicCommand,
         result: Result<(), Error>,
     ) {
-        if self.writes.get(&device_id).copied() != Some(generation) {
-            return;
-        }
-        self.writes.remove(&device_id);
+        let next = match self
+            .writes
+            .remove(&device_id)
+            .map(|state| state.finish(generation))
+        {
+            Some(Ok(next)) => next,
+            Some(Err(state)) => {
+                self.writes.insert(device_id.clone(), state);
+                return;
+            }
+            None => return,
+        };
 
         if let Err(error) = result {
             self.send_command(command, Err(error));
-            let _ = self.commands.try_send(Work::Resync(device_id));
+            if next.is_none() {
+                let _ = self.commands.try_send(Work::Resync(device_id));
+            }
+        }
+
+        if let Some(next) = next {
+            self.schedule_write(next.device, next.value);
         }
     }
 
@@ -493,7 +614,43 @@ pub enum Error {
 mod tests {
     use std::time::Duration;
 
-    use super::Configuration;
+    use super::{Configuration, WriteRequest, WriteState};
+    use crate::brightness::domain::{Device, DeviceId, DeviceKind, Percent};
+
+    fn ddc_request(value: u8) -> WriteRequest {
+        WriteRequest {
+            device: Device {
+                id: DeviceId::ddc("5", "display"),
+                label: "Display".to_owned(),
+                kind: DeviceKind::DdcCi,
+                value: Percent::new(value),
+            },
+            value: Percent::new(value),
+        }
+    }
+
+    #[test]
+    fn stale_debounce_generation_cannot_start_a_write() {
+        let mut state = WriteState::waiting(2);
+
+        assert!(!state.begin(1));
+        assert!(state.begin(2));
+    }
+
+    #[test]
+    fn running_write_retains_only_the_latest_value() {
+        let mut state = WriteState::waiting(1);
+        assert!(state.begin(1));
+
+        state.queue(ddc_request(40)).expect("write should queue");
+        state.queue(ddc_request(80)).expect("write should replace");
+
+        let next = state
+            .finish(1)
+            .expect("running generation should finish")
+            .expect("latest write should remain queued");
+        assert_eq!(next.value, Percent::new(80));
+    }
 
     #[test]
     fn config_accepts_human_brightness_timings() {

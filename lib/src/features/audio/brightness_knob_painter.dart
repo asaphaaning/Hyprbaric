@@ -8,7 +8,6 @@ class BrightnessKnobPainter extends CustomPainter {
   const BrightnessKnobPainter({
     required this.value,
     required this.enabled,
-    required this.emphasized,
     this.console = false,
     this.lampValue,
   });
@@ -18,7 +17,6 @@ class BrightnessKnobPainter extends CustomPainter {
 
   final double value;
   final bool enabled;
-  final bool emphasized;
   final bool console;
   final double? lampValue;
 
@@ -488,7 +486,6 @@ class BrightnessKnobPainter extends CustomPainter {
   bool shouldRepaint(covariant BrightnessKnobPainter oldDelegate) {
     return value != oldDelegate.value ||
         enabled != oldDelegate.enabled ||
-        emphasized != oldDelegate.emphasized ||
         console != oldDelegate.console ||
         lampValue != oldDelegate.lampValue;
   }

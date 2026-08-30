@@ -37,7 +37,6 @@ class BrightnessKnobState extends State<BrightnessKnob> {
   late final HyprLiveValue _value;
   double _startY = 0;
   int _startValue = 0;
-  bool _hovered = false;
 
   @override
   void initState() {
@@ -112,39 +111,40 @@ class BrightnessKnobState extends State<BrightnessKnob> {
       BrightnessKnobPresentation.console => 104,
     };
     final double target = widget.value / 100;
-    final Widget knob = SizedBox.square(
-      dimension: knobDimension,
-      child: widget.presentation == BrightnessKnobPresentation.console
-          ? TweenAnimationBuilder<double>(
-              tween: Tween<double>(end: target),
-              duration: const Duration(milliseconds: 80),
-              curve: Curves.easeOutCubic,
-              builder: (BuildContext context, double pointer, Widget? child) {
-                return TweenAnimationBuilder<double>(
-                  tween: Tween<double>(end: target),
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  builder: (BuildContext context, double lamps, Widget? child) {
-                    return CustomPaint(
-                      painter: BrightnessKnobPainter(
-                        value: pointer,
-                        lampValue: lamps,
-                        enabled: widget.enabled,
-                        emphasized: _hovered || _value.active,
-                        console: true,
-                      ),
-                    );
-                  },
-                );
-              },
-            )
-          : CustomPaint(
-              painter: BrightnessKnobPainter(
-                value: target,
-                enabled: widget.enabled,
-                emphasized: _hovered || _value.active,
+    final Widget knob = RepaintBoundary(
+      child: SizedBox.square(
+        dimension: knobDimension,
+        child: widget.presentation == BrightnessKnobPresentation.console
+            ? TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: target),
+                duration: const Duration(milliseconds: 80),
+                curve: Curves.easeOutCubic,
+                builder: (BuildContext context, double pointer, Widget? child) {
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: target),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    builder:
+                        (BuildContext context, double lamps, Widget? child) {
+                          return CustomPaint(
+                            painter: BrightnessKnobPainter(
+                              value: pointer,
+                              lampValue: lamps,
+                              enabled: widget.enabled,
+                              console: true,
+                            ),
+                          );
+                        },
+                  );
+                },
+              )
+            : CustomPaint(
+                painter: BrightnessKnobPainter(
+                  value: target,
+                  enabled: widget.enabled,
+                ),
               ),
-            ),
+      ),
     );
 
     return MouseRegion(
@@ -153,8 +153,6 @@ class BrightnessKnobState extends State<BrightnessKnob> {
                 ? SystemMouseCursors.grabbing
                 : SystemMouseCursors.resizeUpDown)
           : MouseCursor.defer,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
       child: Listener(
         onPointerSignal: _handlePointerSignal,
         child: GestureDetector(

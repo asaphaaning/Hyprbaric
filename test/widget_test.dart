@@ -3171,52 +3171,57 @@ void main() {
     expect(ended.last, changed.last);
   });
 
+  testWidgets('brightness control presents a frame before committing effects', (
+    WidgetTester tester,
+  ) async {
+    final List<int> committed = <int>[];
+
+    await tester.pumpWidget(
+      _scopedSurface(
+        child: BrightnessControl(
+          status: const BrightnessStatusAvailable(device: 'eDP-1', value: 50),
+          loading: false,
+          onSetBrightness: committed.add,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final Offset center = tester.getCenter(find.byType(BrightnessKnob));
+    await tester.sendEventToBinding(
+      PointerScrollEvent(position: center, scrollDelta: const Offset(0, -10)),
+    );
+
+    expect(committed, isEmpty);
+
+    await tester.pump();
+
+    expect(committed, <int>[54]);
+  });
+
   testWidgets('brightness knob painter repaints for visual state changes', (
     WidgetTester tester,
   ) async {
     const BrightnessKnobPainter painter = BrightnessKnobPainter(
       value: 0.42,
       enabled: true,
-      emphasized: false,
     );
 
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: true,
-          emphasized: false,
-        ),
+        const BrightnessKnobPainter(value: 0.42, enabled: true),
       ),
       false,
     );
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.43,
-          enabled: true,
-          emphasized: false,
-        ),
+        const BrightnessKnobPainter(value: 0.43, enabled: true),
       ),
       true,
     );
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: false,
-          emphasized: false,
-        ),
-      ),
-      true,
-    );
-    expect(
-      painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: true,
-          emphasized: true,
-        ),
+        const BrightnessKnobPainter(value: 0.42, enabled: false),
       ),
       true,
     );
