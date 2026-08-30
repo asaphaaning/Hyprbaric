@@ -10,6 +10,7 @@ class BrightnessKnobPainter extends CustomPainter {
     required this.enabled,
     required this.emphasized,
     this.console = false,
+    this.lampValue,
   });
 
   static const double _startAngle = -135;
@@ -19,6 +20,7 @@ class BrightnessKnobPainter extends CustomPainter {
   final bool enabled;
   final bool emphasized;
   final bool console;
+  final double? lampValue;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -32,7 +34,15 @@ class BrightnessKnobPainter extends CustomPainter {
     final bool lit = enabled && progress > 0.001;
 
     if (console) {
-      _paintConsoleKnob(canvas, center, size.width, progress, lit);
+      final double lampProgress = (lampValue ?? value).clamp(0.0, 1.0);
+      _paintConsoleKnob(
+        canvas,
+        center,
+        size.width,
+        progress,
+        lampProgress,
+        enabled && lampProgress > 0.001,
+      );
       return;
     }
 
@@ -90,16 +100,17 @@ class BrightnessKnobPainter extends CustomPainter {
     Offset center,
     double width,
     double progress,
+    double lampProgress,
     bool lit,
   ) {
     final double faceRadius = width * 0.35;
     final double lipRadius = faceRadius + 5;
 
-    _paintLampSpill(canvas, center, width, progress, lit);
+    _paintLampSpill(canvas, center, width, lampProgress, lit);
     _paintConsoleShadow(canvas, center, width, lipRadius);
     _paintConsoleLip(canvas, center, lipRadius, faceRadius);
     _paintConsoleFace(canvas, center, faceRadius);
-    _paintDotRing(canvas, center, width, progress, lit);
+    _paintDotRing(canvas, center, width, lampProgress, lit);
 
     final double angle = _degreesToRadians(
       _startAngle + progress * _sweepAngle - 90,
@@ -161,21 +172,7 @@ class BrightnessKnobPainter extends CustomPainter {
       ..addOval(lipRect)
       ..addOval(Rect.fromCircle(center: center, radius: faceRadius));
 
-    canvas.drawPath(
-      annulus,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0xFF424448),
-            Color(0xFF333438),
-            Color(0xFF202124),
-            Color(0xFF0D0E10),
-          ],
-          stops: <double>[0, 0.30, 0.68, 1],
-        ).createShader(lipRect),
-    );
+    canvas.drawPath(annulus, Paint()..color = const Color(0xFF25272A));
     canvas.drawCircle(
       center,
       lipRadius - 0.5,
@@ -183,6 +180,14 @@ class BrightnessKnobPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
         ..color = const Color(0x72000000),
+    );
+    canvas.drawCircle(
+      center,
+      faceRadius + 0.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.25
+        ..color = const Color(0xD6090A0C),
     );
   }
 
@@ -193,16 +198,16 @@ class BrightnessKnobPainter extends CustomPainter {
       center,
       faceRadius,
       Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, -0.12),
-          radius: 1.05,
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: <Color>[
-            Color(0xFF161719),
-            Color(0xFF1A1B1D),
-            Color(0xFF232427),
-            Color(0xFF2A2B2E),
+            Color(0xFF0B0C0E),
+            Color(0xFF111215),
+            Color(0xFF1D1F22),
+            Color(0xFF2B2D31),
           ],
-          stops: <double>[0, 0.48, 0.88, 1],
+          stops: <double>[0, 0.42, 0.76, 1],
         ).createShader(faceRect),
     );
     canvas.drawCircle(
@@ -210,14 +215,15 @@ class BrightnessKnobPainter extends CustomPainter {
       faceRadius,
       Paint()
         ..shader = const RadialGradient(
-          center: Alignment(0, 1.25),
-          radius: 1.04,
+          center: Alignment(-0.24, 1.15),
+          radius: 1.15,
           colors: <Color>[
-            Color(0x524E5054),
-            Color(0x243C3E42),
-            Color(0x0036383B),
+            Color(0x5C55585D),
+            Color(0x303E4146),
+            Color(0x0D33363A),
+            Color(0x00303336),
           ],
-          stops: <double>[0, 0.42, 0.76],
+          stops: <double>[0, 0.34, 0.62, 0.84],
         ).createShader(faceRect),
     );
     canvas.drawCircle(
@@ -225,14 +231,14 @@ class BrightnessKnobPainter extends CustomPainter {
       faceRadius,
       Paint()
         ..shader = const RadialGradient(
-          center: Alignment(0, -1.18),
-          radius: 1.0,
+          center: Alignment(0.08, -1.05),
+          radius: 1.16,
           colors: <Color>[
-            Color(0x9C000000),
-            Color(0x42000000),
+            Color(0xB8000000),
+            Color(0x52000000),
             Color(0x00000000),
           ],
-          stops: <double>[0, 0.34, 0.72],
+          stops: <double>[0, 0.38, 0.78],
         ).createShader(faceRect),
     );
     canvas.drawCircle(
@@ -240,28 +246,8 @@ class BrightnessKnobPainter extends CustomPainter {
       faceRadius - 0.5,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = const Color(0xCC000000),
-    );
-    canvas.drawArc(
-      faceRect.deflate(0.75),
-      math.pi,
-      math.pi,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2
-        ..color = const Color(0xA8000000),
-    );
-    canvas.drawArc(
-      faceRect.deflate(0.75),
-      0,
-      math.pi,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = const Color(0x4D8C8E92),
+        ..color = const Color(0xE007080A),
     );
   }
 
@@ -276,6 +262,12 @@ class BrightnessKnobPainter extends CustomPainter {
       return;
     }
 
+    final double warmth = progress * progress;
+    final Color lamp = Color.lerp(
+      const Color(0xFFF8FAF5),
+      const Color(0xFFFFCF55),
+      warmth,
+    )!;
     final Rect spill = Rect.fromCircle(center: center, radius: width * 0.567);
     canvas.drawCircle(
       center.translate(-width * 0.08, width * 0.04),
@@ -283,8 +275,8 @@ class BrightnessKnobPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: <Color>[
-            const Color(0x26F0D46C).withValues(alpha: 0.12 * progress),
-            const Color(0x0FF0D46C).withValues(alpha: 0.05 * progress),
+            lamp.withValues(alpha: 0.10 * progress),
+            lamp.withValues(alpha: 0.04 * progress),
             Colors.transparent,
           ],
           stops: const <double>[0, 0.58, 1],
@@ -300,9 +292,7 @@ class BrightnessKnobPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeWidth = width * 0.14
-        ..color = const Color(
-          0x30F0D46C,
-        ).withValues(alpha: 0.10 + progress * 0.08)
+        ..color = lamp.withValues(alpha: 0.08 + progress * 0.08)
         ..blendMode = BlendMode.plus
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, width * 0.075),
     );
@@ -316,8 +306,15 @@ class BrightnessKnobPainter extends CustomPainter {
     bool lit,
   ) {
     const int dots = 28;
-    final int activeDots = lit ? (progress * (dots - 1)).round() + 1 : 0;
     final double radius = width * 0.567;
+    final double illuminatedDots = lit ? progress * dots : 0;
+    final double warmth = progress * progress;
+    final Color lamp = Color.lerp(
+      const Color(0xFFF8FAF5),
+      const Color(0xFFFFD05A),
+      warmth,
+    )!;
+    const Color inactive = Color(0xFF2D3033);
 
     for (int index = 0; index < dots; index += 1) {
       final double fraction = index / (dots - 1);
@@ -326,23 +323,26 @@ class BrightnessKnobPainter extends CustomPainter {
       );
       final Offset dot =
           center + Offset(math.cos(angle), math.sin(angle)) * radius;
-      final bool active = index < activeDots;
+      final double intensity = (illuminatedDots - index).clamp(0.0, 1.0);
+      final double easedIntensity = Curves.easeOutCubic.transform(intensity);
 
-      if (active) {
+      if (easedIntensity > 0) {
         canvas.drawCircle(
           dot,
-          3.2,
+          3.1 + progress * 0.7,
           Paint()
-            ..color = const Color(0x88F4D86D)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+            ..color = lamp.withValues(alpha: 0.34 * easedIntensity)
+            ..maskFilter = MaskFilter.blur(
+              BlurStyle.normal,
+              2.8 + progress * 2.2,
+            ),
         );
       }
 
       canvas.drawCircle(
         dot,
-        1.65,
-        Paint()
-          ..color = active ? const Color(0xFFFFE79A) : const Color(0xFF303236),
+        1.7,
+        Paint()..color = Color.lerp(inactive, lamp, easedIntensity)!,
       );
     }
   }
@@ -484,6 +484,7 @@ class BrightnessKnobPainter extends CustomPainter {
     return value != oldDelegate.value ||
         enabled != oldDelegate.enabled ||
         emphasized != oldDelegate.emphasized ||
-        console != oldDelegate.console;
+        console != oldDelegate.console ||
+        lampValue != oldDelegate.lampValue;
   }
 }

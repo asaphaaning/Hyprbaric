@@ -111,16 +111,40 @@ class BrightnessKnobState extends State<BrightnessKnob> {
       BrightnessKnobPresentation.labeled => 76,
       BrightnessKnobPresentation.console => 104,
     };
+    final double target = widget.value / 100;
     final Widget knob = SizedBox.square(
       dimension: knobDimension,
-      child: CustomPaint(
-        painter: BrightnessKnobPainter(
-          value: widget.value / 100,
-          enabled: widget.enabled,
-          emphasized: _hovered || _value.active,
-          console: widget.presentation == BrightnessKnobPresentation.console,
-        ),
-      ),
+      child: widget.presentation == BrightnessKnobPresentation.console
+          ? TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: target),
+              duration: const Duration(milliseconds: 80),
+              curve: Curves.easeOutCubic,
+              builder: (BuildContext context, double pointer, Widget? child) {
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: target),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  builder: (BuildContext context, double lamps, Widget? child) {
+                    return CustomPaint(
+                      painter: BrightnessKnobPainter(
+                        value: pointer,
+                        lampValue: lamps,
+                        enabled: widget.enabled,
+                        emphasized: _hovered || _value.active,
+                        console: true,
+                      ),
+                    );
+                  },
+                );
+              },
+            )
+          : CustomPaint(
+              painter: BrightnessKnobPainter(
+                value: target,
+                enabled: widget.enabled,
+                emphasized: _hovered || _value.active,
+              ),
+            ),
     );
 
     return MouseRegion(
