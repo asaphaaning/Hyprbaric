@@ -44,7 +44,7 @@ class WorkspaceStrip extends StatelessWidget {
             key: ValueKey<String>('workspace-indicator-$index'),
             label: _workspaceIndicatorLabel(index, status, settings),
             active: !status.isSpecial && index == active,
-            occupied: false,
+            occupied: status.occupiedWorkspaceIds.contains(index),
             onPressed: settings.clickable ? () => onSelect(index) : null,
           ),
           if (index != visibleWorkspaces.last)
@@ -127,24 +127,21 @@ class WorkspaceButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool active = this.active;
     final bool occupied = this.occupied;
+    final HyprPalette palette = context.hyprPalette;
     final Color foreground = active
-        ? HyprColors.accentSoft
-        : occupied
-        ? HyprColors.textMuted
+        ? palette.accentSoft
         : HyprColors.textFaint;
-    final Color fill = active
-        ? const Color(0x14384954)
-        : occupied
-        ? const Color(0x295C6B78)
-        : const Color(0x14384954);
     final BorderSide border = active
-        ? const BorderSide(color: Color(0x6655A7FF), width: 1)
-        : occupied
-        ? const BorderSide(color: Color(0x245F7282), width: 1)
+        ? BorderSide(
+            color: palette.accentSoft.withValues(alpha: 0.40),
+            width: 1,
+          )
         : BorderSide.none;
     final List<BoxShadow> shadows = <BoxShadow>[
       BoxShadow(
-        color: active ? const Color(0x2255A7FF) : Colors.transparent,
+        color: active
+            ? palette.accentSoft.withValues(alpha: 0.13)
+            : Colors.transparent,
         blurRadius: active ? 8 : 0,
         spreadRadius: 0,
       ),
@@ -177,10 +174,10 @@ class WorkspaceButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: HyprMotion.workspace,
             curve: HyprMotion.workspaceCurve,
-            width: active ? 31 : 22,
-            height: active ? 18 : 16,
+            width: 31,
+            height: 18,
             decoration: ShapeDecoration(
-              color: fill,
+              color: active ? palette.fill : Colors.transparent,
               shadows: shadows,
               shape: RoundedSuperellipseBorder(
                 borderRadius: BorderRadius.circular(
@@ -189,17 +186,39 @@ class WorkspaceButton extends StatelessWidget {
                 side: border,
               ),
             ),
-            child: Center(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: HyprTypography.workspace.copyWith(
-                  color: foreground,
-                  fontSize: active ? 10.5 : 9.5,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: HyprTypography.workspace.copyWith(
+                    color: foreground,
+                    fontSize: 10.5,
+                    fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+                  ),
                 ),
-              ),
+                if (occupied && !active)
+                  Positioned(
+                    bottom: -3,
+                    child: DecoratedBox(
+                      key: ValueKey<String>('workspace-occupancy-dot-$label'),
+                      decoration: BoxDecoration(
+                        color: palette.accentSoft,
+                        shape: BoxShape.circle,
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: palette.accentSoft.withValues(alpha: 0.45),
+                            blurRadius: 3,
+                          ),
+                        ],
+                      ),
+                      child: const SizedBox.square(dimension: 3),
+                    ),
+                  ),
+              ],
             ),
           ),
         );

@@ -91,6 +91,7 @@ pub(crate) fn send_workspace_signal(snapshot: &WorkspaceSnapshot) {
         id: snapshot.id.get(),
         name: snapshot.name.clone(),
         is_special: snapshot.is_special,
+        occupied_workspace_ids: snapshot.occupied.ids().map(|id| id.get()).collect(),
     }
     .send_signal_to_dart();
 }

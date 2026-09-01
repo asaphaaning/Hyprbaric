@@ -1,7 +1,9 @@
 //! Typed projections and commands independent of the Hyprland crate.
 
+use std::collections::BTreeSet;
+
 /// A Hyprland workspace identity.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WorkspaceId(i32);
 
 /// A typed compositor request.
@@ -26,15 +28,39 @@ pub struct WorkspaceSnapshot {
     pub name: String,
     /// Whether the active workspace is a special workspace.
     pub is_special: bool,
+    /// The regular workspaces that currently contain one or more windows.
+    pub occupied: WorkspaceOccupancy,
 }
 
 impl WorkspaceSnapshot {
-    pub(super) fn new(id: i32, name: String, is_special: bool) -> Self {
+    pub(super) fn new(
+        id: i32,
+        name: String,
+        is_special: bool,
+        occupied: WorkspaceOccupancy,
+    ) -> Self {
         Self {
             id: WorkspaceId::observed(id),
             name,
             is_special,
+            occupied,
         }
+    }
+}
+
+/// The regular Hyprland workspaces that currently contain windows.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct WorkspaceOccupancy(BTreeSet<WorkspaceId>);
+
+impl WorkspaceOccupancy {
+    /// Builds occupancy from workspace IDs whose corresponding workspace has windows.
+    pub(super) fn from_occupied_ids(ids: impl IntoIterator<Item = i32>) -> Self {
+        Self(ids.into_iter().map(WorkspaceId::observed).collect())
+    }
+
+    /// Iterates over the IDs of occupied workspaces in ascending order.
+    pub fn ids(&self) -> impl Iterator<Item = WorkspaceId> + '_ {
+        self.0.iter().copied()
     }
 }
 
@@ -98,7 +124,10 @@ fn normalize(value: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{FocusedWindowSnapshot, WorkspaceTarget, normalize_app_name, normalize_title};
+    use super::{
+        FocusedWindowSnapshot, WorkspaceId, WorkspaceOccupancy, WorkspaceTarget,
+        normalize_app_name, normalize_title,
+    };
 
     #[test]
     fn normalize_title_rejects_blank_values() {
@@ -130,5 +159,15 @@ mod tests {
         assert_eq!(WorkspaceTarget::absolute(0), None);
         assert_eq!(WorkspaceTarget::absolute(-1), None);
         assert!(WorkspaceTarget::absolute(1).is_some());
+    }
+
+    #[test]
+    fn workspace_occupancy_contains_only_observed_workspace_ids() {
+        let occupancy = WorkspaceOccupancy::from_occupied_ids([3, 1, 3]);
+
+        assert_eq!(
+            occupancy.ids().map(WorkspaceId::get).collect::<Vec<_>>(),
+            vec![1, 3]
+        );
     }
 }

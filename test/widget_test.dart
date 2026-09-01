@@ -956,7 +956,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -981,7 +986,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -1164,13 +1174,27 @@ void main() {
         child: const Hyprbaric(),
       ),
     );
-    workspaces.add(const WorkspaceStatus(id: 2, name: '2', isSpecial: false));
+    workspaces.add(
+      const WorkspaceStatus(
+        id: 2,
+        name: '2',
+        isSpecial: false,
+        occupiedWorkspaceIds: <int>[],
+      ),
+    );
     await tester.pumpAndSettle();
 
     final Finder strip = find.byKey(const ValueKey<String>('workspace-strip'));
     final double widthBefore = tester.getRect(strip).width;
 
-    workspaces.add(const WorkspaceStatus(id: 3, name: '3', isSpecial: false));
+    workspaces.add(
+      const WorkspaceStatus(
+        id: 3,
+        name: '3',
+        isSpecial: false,
+        occupiedWorkspaceIds: <int>[],
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 80));
     final double widthDuring = tester.getRect(strip).width;
     await tester.pumpAndSettle();
@@ -1188,7 +1212,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 8, name: '8', isSpecial: false),
+              const WorkspaceStatus(
+                id: 8,
+                name: '8',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -1211,7 +1240,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
           workspaceSettingsStatusProvider.overrideWith(
@@ -1254,7 +1288,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 3, name: '3', isSpecial: false),
+              const WorkspaceStatus(
+                id: 3,
+                name: '3',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
           workspaceSettingsStatusProvider.overrideWith(
@@ -1294,7 +1333,12 @@ void main() {
           rustCommandDispatcherProvider.overrideWith((ref) => dispatcher),
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
           workspaceSettingsStatusProvider.overrideWith(
@@ -1339,7 +1383,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -1359,8 +1408,9 @@ void main() {
     );
     final ShapeDecoration decoration =
         activePlate.decoration! as ShapeDecoration;
+    final HyprPalette palette = tester.element(find.text('II')).hyprPalette;
 
-    expect(activeLabel.style?.color, HyprColors.accentSoft);
+    expect(activeLabel.style?.color, palette.accentSoft);
     expect(decoration.color, isNot(HyprColors.accent));
   });
 
@@ -1372,7 +1422,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -1413,7 +1468,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],
@@ -1448,7 +1508,12 @@ void main() {
         overrides: [
           workspaceStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const WorkspaceStatus(id: 2, name: '2', isSpecial: false),
+              const WorkspaceStatus(
+                id: 2,
+                name: '2',
+                isSpecial: false,
+                occupiedWorkspaceIds: <int>[],
+              ),
             ),
           ),
         ],

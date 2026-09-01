@@ -18,6 +18,7 @@ pub struct WorkspaceStatus {
     pub id: i32,
     pub name: String,
     pub is_special: bool,
+    pub occupied_workspace_ids: Vec<i32>,
 }
 
 #[derive(Serialize, RustSignal)]

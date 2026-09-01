@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
 use hyprland::{
-    data::{Client, Workspace},
+    data::{Client, Workspace, Workspaces},
     dispatch::{Dispatch, DispatchType, WorkspaceIdentifierWithSpecial},
     error::HyprError,
     prelude::*,
@@ -12,7 +12,9 @@ use tracing::instrument;
 mod domain;
 mod listener;
 
-pub use domain::{Command, FocusedWindowSnapshot, WorkspaceSnapshot, WorkspaceTarget};
+pub use domain::{
+    Command, FocusedWindowSnapshot, WorkspaceOccupancy, WorkspaceSnapshot, WorkspaceTarget,
+};
 
 /// Live Hyprland desktop observation.
 pub struct Desktop {
@@ -28,7 +30,9 @@ impl Desktop {
         let initial_workspace = Workspace::get_active_async()
             .await
             .map_err(Error::ActiveWorkspace)?;
-        let snapshot = WorkspaceSnapshot::new(initial_workspace.id, initial_workspace.name, false);
+        let snapshot = workspace_snapshot(initial_workspace, false)
+            .await
+            .map_err(Error::Workspaces)?;
         let hostname = resolve_hostname();
         let initial_client = Client::get_active_async()
             .await
@@ -95,6 +99,30 @@ impl Desktop {
     }
 }
 
+async fn workspace_snapshot(
+    workspace: Workspace,
+    is_special: bool,
+) -> Result<WorkspaceSnapshot, HyprError> {
+    let occupancy = workspace_occupancy().await?;
+
+    Ok(WorkspaceSnapshot::new(
+        workspace.id,
+        workspace.name,
+        is_special,
+        occupancy,
+    ))
+}
+
+pub(super) async fn workspace_occupancy() -> Result<WorkspaceOccupancy, HyprError> {
+    Ok(WorkspaceOccupancy::from_occupied_ids(
+        Workspaces::get_async()
+            .await?
+            .into_iter()
+            .filter(|workspace| workspace.windows > 0)
+            .map(|workspace| workspace.id),
+    ))
+}
+
 /// Formats a workspace command for Hyprland's Lua-config IPC mode.
 fn lua_workspace_dispatch(identifier: WorkspaceIdentifierWithSpecial<'_>) -> String {
     format!("hl.dsp.focus({{ workspace = \"{identifier}\" }})")
@@ -141,6 +169,8 @@ pub enum Error {
     ActiveWorkspace(#[source] HyprError),
     #[error("failed to fetch the active Hyprland client")]
     ActiveClient(#[source] HyprError),
+    #[error("failed to fetch Hyprland workspace occupancy")]
+    Workspaces(#[source] HyprError),
     #[error("failed to start the Hyprland event listener")]
     Listener(#[source] HyprError),
     #[error("failed to dispatch a Hyprland command: {0}")]
