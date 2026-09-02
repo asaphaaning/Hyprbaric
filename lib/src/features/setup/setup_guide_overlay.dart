@@ -45,7 +45,6 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
   ];
 
   final FocusNode _focusNode = FocusNode(debugLabel: 'setup-guide');
-  late final LayerShellController _layerShellController;
   late final LayerShellRegionManager _regionManager;
   SetupStep _step = SetupStep.welcome;
   bool _readyReported = false;
@@ -53,7 +52,6 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
   @override
   void initState() {
     super.initState();
-    _layerShellController = ref.read(layerShellControllerProvider);
     _regionManager = ref.read(layerShellRegionManagerProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
@@ -62,7 +60,7 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
 
       _focusNode.requestFocus();
       unawaited(
-        _layerShellController.setKeyboardMode(LayerShellKeyboardMode.exclusive),
+        LayerShellController.setKeyboardMode(LayerShellKeyboardMode.exclusive),
       );
       unawaited(_updateRegion());
     });
@@ -79,7 +77,7 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
   @override
   void dispose() {
     unawaited(
-      _layerShellController.setKeyboardMode(LayerShellKeyboardMode.none),
+      LayerShellController.setKeyboardMode(LayerShellKeyboardMode.none),
     );
     unawaited(
       _regionManager.removePassiveRegions(
