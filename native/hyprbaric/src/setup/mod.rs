@@ -119,6 +119,9 @@ impl Guide {
 /// Setup-guide failure.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// The `[setup]` configuration item is not a TOML table.
+    #[error("setup configuration must be a TOML table")]
+    InvalidTable,
     /// The user configuration could not be updated.
     #[error("failed to persist setup completion")]
     Configuration(#[from] crate::config::Error),

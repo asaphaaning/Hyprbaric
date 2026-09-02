@@ -17,21 +17,25 @@ const TABLE: &str = "setup";
 )]
 pub(super) fn complete(configuration: &Configuration) -> Result<Configuration, Error> {
     let completed = configuration.completed();
-    config::edit(|document| write(document, &completed))?;
+    let mut result = Ok(());
+
+    config::edit(|document| result = write(document, &completed))?;
+    result?;
 
     Ok(completed)
 }
 
-fn write(document: &mut DocumentMut, configuration: &Configuration) {
+fn write(document: &mut DocumentMut, configuration: &Configuration) -> Result<(), Error> {
     if !document.as_table().contains_key(TABLE) {
         document[TABLE] = Item::Table(Table::new());
     }
 
-    let Some(table) = document[TABLE].as_table_mut() else {
-        return;
-    };
+    let table = document[TABLE].as_table_mut().ok_or(Error::InvalidTable)?;
+
     table["startup"] = value(configuration.startup().as_str());
     table["completed"] = value(configuration.completion().is_complete());
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -39,7 +43,7 @@ mod tests {
     use toml_edit::DocumentMut;
 
     use super::write;
-    use crate::setup::{Configuration, Status};
+    use crate::setup::{Configuration, Error, Status};
 
     #[test]
     fn completion_preserves_never_policy() {
@@ -49,10 +53,24 @@ mod tests {
                 .completed();
         let mut document = DocumentMut::new();
 
-        write(&mut document, &configuration);
+        write(&mut document, &configuration).expect("setup config should be writable");
 
         assert!(document.to_string().contains("startup = \"never\""));
         assert!(document.to_string().contains("completed = true"));
         assert_eq!(configuration.status(), Status::Disabled);
+    }
+
+    #[test]
+    fn completion_rejects_a_non_table_setup_value() {
+        let configuration = Configuration::default().completed();
+        let mut document = "setup = \"already-complete\""
+            .parse::<DocumentMut>()
+            .expect("setup fixture should parse");
+
+        let error = write(&mut document, &configuration)
+            .expect_err("a scalar setup value cannot be completed");
+
+        assert!(matches!(error, Error::InvalidTable));
+        assert_eq!(document.to_string(), "setup = \"already-complete\"\n");
     }
 }
