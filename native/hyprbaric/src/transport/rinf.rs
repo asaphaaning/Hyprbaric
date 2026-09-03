@@ -14,10 +14,12 @@ use crate::signals::{
     PowerCommandResult, PowerSetProfile, PowerStatus, RecordingCommandResult, RecordingRequest,
     RecordingStatus, ScheduleCommand, ScheduleCommandResult, ScheduleStatus,
     ScreenshotCaptureRequest, ScreenshotCommandResult, SessionActionAvailability, SessionCommand,
-    SessionCommandResult, ShortcutSettingsCommandResult, ShortcutSettingsRequest,
-    ShortcutSettingsSnapshot, TrayActivateRequest, TrayMenuItemActivateRequest, TrayMenuStatus,
-    TrayStatus, WorkspaceSettingsCommand, WorkspaceSettingsCommandResult, WorkspaceSettingsStatus,
-    WorkspaceStatus, WorkspaceSwitch, WorkspaceSwitchKind,
+    SessionCommandResult, SetupCommand, SetupCommandResult, SetupStatus,
+    ShortcutSettingsCommandResult,
+    ShortcutSettingsRequest, ShortcutSettingsSnapshot, TrayActivateRequest,
+    TrayMenuItemActivateRequest, TrayMenuStatus, TrayStatus, WorkspaceSettingsCommand,
+    WorkspaceSettingsCommandResult, WorkspaceSettingsStatus, WorkspaceStatus, WorkspaceSwitch,
+    WorkspaceSwitchKind,
 };
 use crate::{
     app::{
@@ -29,7 +31,7 @@ use crate::{
 use crate::{
     appearance, audio, brightness, caffeine, capabilities, clock, color_picker, launcher, modules,
     network, night_light, notifications, portals, power, recording, schedule, screenshot, session,
-    shortcuts, tray, workspaces,
+    setup, shortcuts, tray, workspaces,
 };
 use rinf::RustSignal;
 use rinf_router::State;
@@ -81,6 +83,8 @@ pub(crate) fn publish(output: &Output) {
         Output::SessionAvailability(availability) => {
             send_session_availability_signal(availability);
         }
+        Output::Setup(status) => send_setup_signal(*status),
+        Output::SetupReport(report) => send_setup_command_result(report),
         Output::Portal(color_scheme) => send_portal_signal(*color_scheme),
         Output::Shortcut(_) => {}
     }
@@ -205,6 +209,10 @@ pub(crate) async fn handle_audio_command(State(context): State<App>, command: Au
     };
 
     dispatch(&context, AppCommand::Audio(command)).await;
+}
+
+pub(crate) async fn handle_setup_command(State(context): State<App>, command: SetupCommand) {
+    dispatch(&context, AppCommand::Setup(command.into())).await;
 }
 
 pub(crate) async fn handle_appearance_command(
@@ -553,6 +561,17 @@ pub(crate) fn send_network_command_result(result: &network::Report) {
 
 pub(crate) fn send_appearance_signal(snapshot: &appearance::Snapshot) {
     AppearanceStatus::from(snapshot).send_signal_to_dart();
+}
+
+pub(crate) fn send_setup_signal(status: setup::Status) {
+    SetupStatus {
+        state: status.into(),
+    }
+    .send_signal_to_dart();
+}
+
+pub(crate) fn send_setup_command_result(result: &setup::Report) {
+    SetupCommandResult::from(result).send_signal_to_dart();
 }
 
 pub(crate) fn send_appearance_command_result(result: &appearance::Report) {

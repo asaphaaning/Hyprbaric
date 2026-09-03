@@ -16,6 +16,7 @@ export 'rust_signals/recording.dart';
 export 'rust_signals/schedule.dart';
 export 'rust_signals/screenshot.dart';
 export 'rust_signals/session.dart';
+export 'rust_signals/setup.dart';
 export 'rust_signals/shortcuts.dart';
 export 'rust_signals/tray.dart';
 export 'rust_signals/workspace_settings.dart';

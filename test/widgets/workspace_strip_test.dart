@@ -16,6 +16,7 @@ void main() {
               name: '2',
               isSpecial: false,
               occupiedWorkspaceIds: <int>[1, 3],
+              monitors: <MonitorWorkspaceStatus>[],
             ),
             settings: const WorkspaceSettingsStatus(
               indicatorStyle: WorkspaceIndicatorStyle.roman,

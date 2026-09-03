@@ -1,5 +1,7 @@
 //! Hyprland event-listener boundary.
 
+use std::{sync::Arc, time::Duration};
+
 use hyprland::{
     data::{Client, Workspace},
     event_listener::{
@@ -8,10 +10,18 @@ use hyprland::{
     prelude::*,
     shared::WorkspaceType,
 };
-use tokio::sync::broadcast;
+use tokio::sync::{Mutex, broadcast};
+use tokio::task::JoinHandle;
 use tracing::instrument;
 
-use super::{Error, FocusedWindowSnapshot, WorkspaceSnapshot, workspace_occupancy};
+use super::{
+    Error, FocusedWindowSnapshot, WorkspaceSnapshot, is_special_workspace, workspace_occupancy,
+};
+
+/// How long to wait after the last window-moved event before refreshing.
+///
+/// Drags emit move storms; occupancy only matters once the window settles.
+const MOVE_DEBOUNCE: Duration = Duration::from_millis(400);
 
 /// Runs compositor observation until Hyprland closes the event listener.
 #[instrument(name = "hyprbaric::hyprland::listener::run", skip_all, fields(%hostname), err)]
@@ -42,9 +52,27 @@ pub(super) async fn run(
         Box::pin(async move { refresh_active_workspace(sender).await })
     });
 
-    listener.add_window_moved_handler(move |_| {
+    listener.add_window_moved_handler({
         let sender = workspace_sender.clone();
-        Box::pin(async move { refresh_active_workspace(sender).await })
+        let pending: Arc<Mutex<Option<JoinHandle<()>>>> = Arc::new(Mutex::new(None));
+
+        move |_| {
+            let sender = sender.clone();
+            let pending = pending.clone();
+
+            Box::pin(async move {
+                let mut slot = pending.lock().await;
+
+                if let Some(previous) = slot.take() {
+                    previous.abort();
+                }
+
+                *slot = Some(tokio::spawn(async move {
+                    tokio::time::sleep(MOVE_DEBOUNCE).await;
+                    refresh_active_workspace(sender).await;
+                }));
+            })
+        }
     });
 
     let active_window_hostname = hostname.clone();
@@ -84,11 +112,16 @@ async fn refresh_active_workspace(sender: broadcast::Sender<WorkspaceSnapshot>) 
             return;
         }
     };
-    let is_special = workspace.id < 0;
+    let is_special = is_special_workspace(workspace.id);
 
     refresh_workspace(sender, workspace.id, workspace.name, is_special).await;
 }
 
+/// Publishes a workspace snapshot with fresh occupancy.
+///
+/// Occupancy is last-known-good: when the refresh fails the previous snapshot
+/// stands and the failure is only logged. The next workspace or window event
+/// retries.
 async fn refresh_workspace(
     sender: broadcast::Sender<WorkspaceSnapshot>,
     id: i32,

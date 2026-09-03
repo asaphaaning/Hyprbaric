@@ -7,6 +7,7 @@ import 'bindings/bindings.dart';
 import 'features/launcher/app_launcher.dart';
 import 'features/session/session_launcher.dart';
 import 'features/settings/settings_overlay.dart';
+import 'features/setup/setup_guide_host.dart';
 import 'layer_shell_controller.dart';
 import 'layer_shell_hit_region.dart';
 import 'state/providers.dart';
@@ -713,6 +714,10 @@ class _BarViewState extends ConsumerState<_BarView> {
         ToastHost(barHeight: barHeight, onToastPressed: _openNotificationToast),
         const OsdHost(),
         if (_settingsOpen) SettingsModalOverlay(onClose: _closeSettingsModal),
+        SetupGuideHost(
+          key: const ValueKey<String>('setup-guide-host'),
+          onReady: _closeSettingsModal,
+        ),
       ],
     );
   }

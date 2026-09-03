@@ -88,6 +88,30 @@ class LayerShellController {
   static Future<void> setKeyboardMode(LayerShellKeyboardMode mode) =>
       _invoke('setKeyboardMode', () => _api.setKeyboardMode(mode.native));
 
+  /// Compositor keyboard claims by owner.
+  ///
+  /// Several overlays (settings, setup guide, launchers, network password)
+  /// need exclusive keyboard while open. Each one claims on open and releases
+  /// on close; the mode stays exclusive until the last claim is released, so
+  /// overlapping overlays cannot strand each other without keyboard access.
+  static final Set<String> _keyboardOwners = <String>{};
+
+  static Future<void> claimKeyboard(String owner) {
+    _keyboardOwners.add(owner);
+    return setKeyboardMode(LayerShellKeyboardMode.exclusive);
+  }
+
+  static Future<void> releaseKeyboard(String owner) {
+    _keyboardOwners.remove(owner);
+    if (_keyboardOwners.isNotEmpty) {
+      return Future<void>.value();
+    }
+    return setKeyboardMode(LayerShellKeyboardMode.none);
+  }
+
+  @visibleForTesting
+  static void debugResetKeyboardOwners() => _keyboardOwners.clear();
+
   static Future<void> setSize({int? width, int? height}) {
     if (width == null && height == null) return Future<void>.value();
     return _invoke(

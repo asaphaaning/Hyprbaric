@@ -32,9 +32,11 @@ import 'package:hyprbaric/src/features/settings/settings_overlay_content.dart';
 import 'package:hyprbaric/src/features/settings/settings_overlay_layout.dart';
 import 'package:hyprbaric/src/features/settings/settings_rows.dart';
 import 'package:hyprbaric/src/features/settings/settings_tabs.dart';
+import 'package:hyprbaric/src/features/setup/setup_guide_state.dart';
 import 'package:hyprbaric/src/features/tray/tray_menu_panel.dart';
 import 'package:hyprbaric/src/features/tray/tray_strip.dart';
 import 'package:hyprbaric/src/hyprbaric.dart';
+import 'package:hyprbaric/src/layer_shell_controller.dart';
 import 'package:hyprbaric/src/layer_shell_hit_region.dart';
 import 'package:hyprbaric/src/native/layer_shell_api.g.dart';
 import 'package:hyprbaric/src/state/providers.dart';
@@ -961,6 +963,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -991,6 +994,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1037,6 +1041,7 @@ void main() {
                 appName: 'Zed',
                 title: 'bar.tsx',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1180,6 +1185,7 @@ void main() {
         name: '2',
         isSpecial: false,
         occupiedWorkspaceIds: <int>[],
+        monitors: <MonitorWorkspaceStatus>[],
       ),
     );
     await tester.pumpAndSettle();
@@ -1193,6 +1199,7 @@ void main() {
         name: '3',
         isSpecial: false,
         occupiedWorkspaceIds: <int>[],
+        monitors: <MonitorWorkspaceStatus>[],
       ),
     );
     await tester.pump(const Duration(milliseconds: 80));
@@ -1217,6 +1224,7 @@ void main() {
                 name: '8',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1245,6 +1253,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1293,6 +1302,7 @@ void main() {
                 name: '3',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1338,6 +1348,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1388,6 +1399,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1427,6 +1439,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1473,6 +1486,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1513,6 +1527,7 @@ void main() {
                 name: '2',
                 isSpecial: false,
                 occupiedWorkspaceIds: <int>[],
+                monitors: <MonitorWorkspaceStatus>[],
               ),
             ),
           ),
@@ -1614,6 +1629,7 @@ void main() {
               const FocusedWindowStatus(
                 title: 'Neovim - hyprbaric',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1639,6 +1655,7 @@ void main() {
                 appName: 'Zed',
                 title: 'bar.tsx',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1666,6 +1683,7 @@ void main() {
                 appName: 'firefox',
                 title: 'ChatGPT',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1692,6 +1710,7 @@ void main() {
                 appName: 'alacritty',
                 title: 'Alacritty',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1718,6 +1737,7 @@ void main() {
                 appName: 'foot',
                 title: null,
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1744,6 +1764,7 @@ void main() {
                 appName: 'desktop',
                 title: null,
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1771,6 +1792,7 @@ void main() {
                 appName: 'hyprland',
                 title: 'desktop',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1793,7 +1815,11 @@ void main() {
         overrides: [
           focusedWindowStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const FocusedWindowStatus(title: null, hostname: 'desktop'),
+              const FocusedWindowStatus(
+                title: null,
+                hostname: 'desktop',
+                monitors: <MonitorFocusedWindowStatus>[],
+              ),
             ),
           ),
         ],
@@ -1818,6 +1844,7 @@ void main() {
                 appName: 'org.example.some-browser.desktop',
                 title: 'Example',
                 hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
               ),
             ),
           ),
@@ -1840,7 +1867,11 @@ void main() {
         overrides: [
           focusedWindowStatusProvider.overrideWith(
             (ref) => Stream.value(
-              const FocusedWindowStatus(title: null, hostname: 'workstation'),
+              const FocusedWindowStatus(
+                title: null,
+                hostname: 'workstation',
+                monitors: <MonitorFocusedWindowStatus>[],
+              ),
             ),
           ),
         ],
@@ -1913,6 +1944,81 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings hands input to a manually launched setup guide', (
+    WidgetTester tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    final List<Map<String, Object?>> regionRequests = <Map<String, Object?>>[];
+    _setRegionMock((Object? message) {
+      regionRequests.add(_regionPayloadFromMessage(message));
+      return _pigeonSuccess();
+    });
+    final List<String> keyboardModes = <String>[];
+    _setKeyboardModeMock((Object? message) {
+      final List<Object?> arguments = message! as List<Object?>;
+      keyboardModes.add(
+        (arguments.single! as NativeLayerShellKeyboardMode).name,
+      );
+      return _pigeonSuccess();
+    });
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+      debugDefaultTargetPlatformOverride = null;
+      LayerShellController.debugResetKeyboardOwners();
+      _setRegionMock(null);
+      _setKeyboardModeMock(null);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          setupGuideAutomaticHostProvider.overrideWithValue(false),
+          setupStatusProvider.overrideWith(
+            (_) => Stream<SetupStatus>.value(
+              const SetupStatus(state: SetupState.complete),
+            ),
+          ),
+        ],
+        child: const Hyprbaric(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Controls'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('run-setup-guide')));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.text('GET STARTED'), findsOneWidget);
+    await tester.tap(find.text('GET STARTED'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Frosted, or flat?'), findsOneWidget);
+    // The settings modal closes underneath the guide. Its teardown must not
+    // release the guide's still-open keyboard claim.
+    expect(keyboardModes, isNotEmpty);
+    expect(
+      keyboardModes,
+      everyElement(NativeLayerShellKeyboardMode.exclusive.name),
+    );
+    final List<Object?> regions =
+        regionRequests.last['regions']! as List<Object?>;
+    expect(regions, hasLength(1));
+    final Map<String, Object?> guideRegion =
+        regions.single! as Map<String, Object?>;
+    expect(guideRegion['x'], 0);
+    expect(guideRegion['y'], 0);
+    expect(guideRegion['w']! as int, greaterThan(40));
+    expect(guideRegion['h']! as int, greaterThan(40));
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('settings content switches tabs and renders version footer', (
@@ -2132,6 +2238,7 @@ void main() {
             (ref) => Stream.value(
               const AppearanceStatus(
                 position: AppearancePosition.bottom,
+                monitor: AppearanceMonitorTargetPrimary(),
                 opacity: 42,
                 cornerRadius: 4,
                 accentHue: 300,
@@ -4213,7 +4320,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    hotkeys.add(_shortcut(0, const HotkeyEventVolumeUp()));
+    hotkeys.add(_shortcut(0, const HotkeyEventVolumeUp(step: 5)));
     await tester.pump();
     await tester.pump();
 

@@ -30,9 +30,7 @@ impl Desktop {
         let initial_workspace = Workspace::get_active_async()
             .await
             .map_err(Error::ActiveWorkspace)?;
-        let snapshot = workspace_snapshot(initial_workspace, false)
-            .await
-            .map_err(Error::Workspaces)?;
+        let snapshot = initial_snapshot(initial_workspace).await;
         let hostname = resolve_hostname();
         let initial_client = Client::get_active_async()
             .await
@@ -99,18 +97,33 @@ impl Desktop {
     }
 }
 
-async fn workspace_snapshot(
-    workspace: Workspace,
-    is_special: bool,
-) -> Result<WorkspaceSnapshot, HyprError> {
-    let occupancy = workspace_occupancy().await?;
+/// Reads the initial workspace projection, degrading to empty occupancy.
+///
+/// Occupancy is advisory: a transient compositor hiccup at startup must not
+/// prevent the bar from connecting. The listener refreshes occupancy on the
+/// first workspace or window event.
+async fn initial_snapshot(workspace: Workspace) -> WorkspaceSnapshot {
+    let id = workspace.id;
+    let name = workspace.name;
+    let is_special = is_special_workspace(id);
 
-    Ok(WorkspaceSnapshot::new(
-        workspace.id,
-        workspace.name,
-        is_special,
-        occupancy,
-    ))
+    match workspace_occupancy().await {
+        Ok(occupancy) => WorkspaceSnapshot::new(id, name, is_special, occupancy),
+        Err(error) => {
+            tracing::warn!(?error, "Falling back to empty workspace occupancy");
+
+            WorkspaceSnapshot::new(id, name, is_special, WorkspaceOccupancy::default())
+        }
+    }
+}
+
+/// Whether a workspace id denotes a special workspace.
+///
+/// Hyprland assigns special workspaces negative ids. The event listener learns
+/// this authoritatively from [`WorkspaceType`](hyprland::shared::WorkspaceType);
+/// this helper covers the polling paths that only see the id.
+pub(super) fn is_special_workspace(id: i32) -> bool {
+    id < 0
 }
 
 pub(super) async fn workspace_occupancy() -> Result<WorkspaceOccupancy, HyprError> {
@@ -169,8 +182,6 @@ pub enum Error {
     ActiveWorkspace(#[source] HyprError),
     #[error("failed to fetch the active Hyprland client")]
     ActiveClient(#[source] HyprError),
-    #[error("failed to fetch Hyprland workspace occupancy")]
-    Workspaces(#[source] HyprError),
     #[error("failed to start the Hyprland event listener")]
     Listener(#[source] HyprError),
     #[error("failed to dispatch a Hyprland command: {0}")]
@@ -179,7 +190,10 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use super::{lua_workspace_dispatch, read_hostname_from_paths, requires_lua_dispatch};
+    use super::{
+        is_special_workspace, lua_workspace_dispatch, read_hostname_from_paths,
+        requires_lua_dispatch,
+    };
     use hyprland::{dispatch::WorkspaceIdentifierWithSpecial, error::HyprError};
     use std::{
         fs,
@@ -225,6 +239,13 @@ mod tests {
             lua_workspace_dispatch(WorkspaceIdentifierWithSpecial::Relative(1)),
             "hl.dsp.focus({ workspace = \"+1\" })"
         );
+    }
+
+    #[test]
+    fn negative_workspace_ids_are_special() {
+        assert!(is_special_workspace(-99));
+        assert!(!is_special_workspace(0));
+        assert!(!is_special_workspace(3));
     }
 
     #[test]

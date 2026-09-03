@@ -20,7 +20,7 @@ use crate::{
         handle_notification_clear_request, handle_notification_dismiss_request,
         handle_notification_dnd_request, handle_power_set_profile, handle_recording_request,
         handle_schedule_command, handle_screenshot_capture_request, handle_session_command,
-        handle_shortcut_settings_request, handle_tray_activate_request,
+        handle_setup_command, handle_shortcut_settings_request, handle_tray_activate_request,
         handle_tray_menu_item_activate_request, handle_workspace_settings_command,
         handle_workspace_switch,
     },
@@ -48,6 +48,7 @@ async fn router(ctx: Context<App>) -> supervised::ServiceOutcome {
         .route(logged(handle_app_launcher_query))
         .route(logged(handle_app_launch_request))
         .route(logged(handle_appearance_command))
+        .route(logged(handle_setup_command))
         .route(logged(handle_module_command))
         .route(logged(handle_workspace_settings_command))
         .route(logged(handle_network_scan_request))

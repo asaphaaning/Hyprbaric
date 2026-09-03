@@ -46,7 +46,7 @@ class _SettingsModalOverlayState extends ConsumerState<SettingsModalOverlay> {
 
   @override
   void dispose() {
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.none));
+    unawaited(LayerShellController.releaseKeyboard(_regionOwner));
     _focusNode.dispose();
     unawaited(
       _regionManager.removePassiveRegions(
@@ -59,11 +59,7 @@ class _SettingsModalOverlayState extends ConsumerState<SettingsModalOverlay> {
 
   void _claimKeyboard() {
     _focusNode.requestFocus();
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.exclusive));
-  }
-
-  Future<void> _setKeyboardMode(LayerShellKeyboardMode mode) async {
-    await LayerShellController.setKeyboardMode(mode);
+    unawaited(LayerShellController.claimKeyboard(_regionOwner));
   }
 
   void _scheduleRegionUpdate() {

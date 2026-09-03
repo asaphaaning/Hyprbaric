@@ -23,6 +23,7 @@ mod recording;
 mod schedule;
 mod screenshot;
 mod session;
+mod setup;
 mod shortcuts;
 mod tray;
 mod workspaces;
@@ -31,5 +32,5 @@ pub use self::{
     app::*, appearance::*, audio::*, brightness::*, caffeine::*, capabilities::*, clock::*,
     color_picker::*, compositor::*, launcher::*, modules::*, network::*, night_light::*,
     notifications::*, portal::*, power::*, recording::*, schedule::*, screenshot::*, session::*,
-    shortcuts::*, tray::*, workspaces::*,
+    setup::*, shortcuts::*, tray::*, workspaces::*,
 };
