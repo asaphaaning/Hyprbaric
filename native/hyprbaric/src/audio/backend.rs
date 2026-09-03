@@ -18,7 +18,7 @@ pub(super) struct Devices;
 
 impl Devices {
     /// Reads the current audio snapshot.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn read_snapshot(self) -> Result<Snapshot, Error> {
         let output = self.read_endpoint(EndpointKind::Output).await.ok();
         let input = self.read_endpoint(EndpointKind::Input).await.ok();
@@ -30,7 +30,7 @@ impl Devices {
     }
 
     /// Reads one default endpoint.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn read_endpoint(self, kind: EndpointKind) -> Result<Endpoint, Error> {
         let inspect = run("wpctl", &["inspect", kind.selector()]).await?;
         let volume = run("wpctl", &["get-volume", kind.selector()]).await?;
@@ -46,7 +46,7 @@ impl Devices {
     }
 
     /// Sets the volume for one endpoint class.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn set_volume(self, kind: EndpointKind, volume: Percent) -> Result<(), Error> {
         let value = format!("{}%", volume.as_u8());
         run("wpctl", &["set-volume", kind.selector(), &value])
@@ -55,7 +55,7 @@ impl Devices {
     }
 
     /// Sets mute state for one endpoint class.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn set_muted(self, kind: EndpointKind, muted: bool) -> Result<(), Error> {
         let value = if muted { "1" } else { "0" };
         run("wpctl", &["set-mute", kind.selector(), value])
@@ -64,7 +64,7 @@ impl Devices {
     }
 }
 
-#[instrument(skip(args))]
+#[instrument(skip(args), err)]
 async fn run(program: &str, args: &[&str]) -> Result<String, Error> {
     let output = ProcessCommand::new(program)
         .args(args)

@@ -13,7 +13,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    #[instrument(skip_all)]
+    #[instrument(skip_all, err)]
     pub async fn read() -> Result<Self, Error> {
         let settings = PortalSettings::new().await.map_err(Error::Connect)?;
         let color_scheme = settings

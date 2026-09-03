@@ -26,7 +26,8 @@ trait NotifierItemActions {
         item_id = %activation.item_id.as_str(),
         x = activation.position.x(),
         y = activation.position.y(),
-    )
+    ),
+    err
 )]
 pub(super) async fn activate(
     client: &watcher::ClientHandle,

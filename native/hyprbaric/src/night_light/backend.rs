@@ -37,7 +37,7 @@ impl Backend {
     }
 
     /// Restarts hyprsunset through systemd user services, falling back to spawn.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn restart(&self) -> Result<(), Error> {
         if !self.is_available() {
             return Err(Error::HyprsunsetUnavailable);
@@ -58,7 +58,7 @@ impl Backend {
     }
 
     /// Applies a temperature, starting hyprsunset only if its IPC socket is absent.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub async fn set_temperature_or_start(&self, temperature: Temperature) -> Result<(), Error> {
         let value = temperature.as_u32().to_string();
         match run_hyprsunset_command(&["temperature", &value]).await {
@@ -71,7 +71,7 @@ impl Backend {
     }
 
     /// Clears hyprsunset's transform through `hyprctl hyprsunset identity`.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub async fn disable(&self) -> Result<(), Error> {
         match run_hyprsunset_command(&["identity"]).await {
             Ok(()) => Ok(()),
@@ -189,7 +189,7 @@ fn missing_hyprsunset_socket(error: &Error) -> bool {
     }
 }
 
-#[instrument]
+#[instrument(err)]
 async fn systemd_unit(action: UnitAction) -> Result<(), Error> {
     let conn = Connection::session()
         .await
@@ -219,7 +219,7 @@ async fn systemd_unit(action: UnitAction) -> Result<(), Error> {
     Ok(())
 }
 
-#[instrument]
+#[instrument(err)]
 async fn reset_failed_systemd_unit() -> Result<(), Error> {
     let conn = Connection::session()
         .await
@@ -237,7 +237,7 @@ async fn reset_failed_systemd_unit() -> Result<(), Error> {
     Ok(())
 }
 
-#[instrument]
+#[instrument(err)]
 async fn start_process() -> Result<(), Error> {
     ProcessCommand::new(HYPRSUNSET)
         .stdin(Stdio::null())

@@ -9,7 +9,7 @@ use super::{Command, Configuration, Error};
 
 const TABLE: &str = "workspaces";
 
-#[instrument(skip(command))]
+#[instrument(skip(command), err)]
 pub fn save(command: &Command, current: Configuration) -> Result<Configuration, Error> {
     let next = current.apply(command);
     config::edit(|document| write_workspaces(document, next))?;

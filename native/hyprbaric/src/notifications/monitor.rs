@@ -27,7 +27,7 @@ const NOTIFICATIONS_PATH: &str = "/org/freedesktop/Notifications";
 const PROCESS_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Starts the D-Bus monitor thread.
-#[instrument(skip_all)]
+#[instrument(skip_all, err)]
 pub(super) fn spawn(on_event: impl Fn(Event) + Send + Sync + 'static) -> Result<(), Error> {
     let connection = Connection::new_session().map_err(Error::ConnectSessionBus)?;
     become_monitor(&connection)?;
@@ -51,7 +51,7 @@ pub(super) fn spawn(on_event: impl Fn(Event) + Send + Sync + 'static) -> Result<
     Ok(())
 }
 
-#[instrument(skip_all)]
+#[instrument(skip_all, err)]
 fn become_monitor(connection: &Connection) -> Result<(), Error> {
     let proxy = connection.with_proxy(DBUS_BUS, DBUS_PATH, PROCESS_TIMEOUT);
     proxy

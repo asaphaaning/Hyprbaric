@@ -91,7 +91,7 @@ impl Launcher {
         results
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub async fn rebuild(&self) -> Result<Results, Error> {
         let desktop_dirs = self.desktop_dirs.to_vec();
         let locales = self.locales.to_vec();
@@ -112,7 +112,7 @@ impl Launcher {
         Ok(results)
     }
 
-    #[instrument(skip(self), fields(entry_id = %entry_id))]
+    #[instrument(skip(self), fields(entry_id = %entry_id), err)]
     pub async fn launch(&self, entry_id: Id) -> Result<(), Error> {
         let entry = {
             let state = self.state.read().await;

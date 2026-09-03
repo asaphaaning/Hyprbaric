@@ -48,7 +48,7 @@ impl Actions {
     }
 
     /// Executes a session action.
-    #[instrument(skip(self), fields(action = action.label()))]
+    #[instrument(skip(self), fields(action = action.label()), err)]
     pub async fn execute(&self, action: Action) -> Result<(), Error> {
         match action {
             Action::Lock => login1::lock_current_session().await,

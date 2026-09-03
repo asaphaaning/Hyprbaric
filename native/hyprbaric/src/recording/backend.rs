@@ -41,7 +41,7 @@ struct Monitor {
 
 impl Backend {
     /// Probes whether `wf-recorder` can be spawned.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn probe(self) -> Result<(), Failure> {
         match Process::new("wf-recorder")
             .arg("--version")
@@ -57,7 +57,7 @@ impl Backend {
     }
 
     /// Starts one recording process.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn start(self, mode: Mode) -> Result<Started, Failure> {
         let area = match mode {
             Mode::Region => select_region().await?,
@@ -96,7 +96,7 @@ impl Backend {
     }
 
     /// Stops one recording process.
-    #[instrument(skip(self, child))]
+    #[instrument(skip(self, child), err)]
     pub(super) async fn stop(self, mut child: Child, active: &Active) -> Result<PathBuf, Failure> {
         interrupt(&mut child).await?;
 
@@ -117,7 +117,7 @@ impl Backend {
     }
 }
 
-#[instrument]
+#[instrument(err)]
 async fn select_region() -> Result<Area, Failure> {
     time::sleep(SELECTION_SETTLE).await;
     let rects = selectable_rects().await?;
@@ -142,7 +142,7 @@ async fn select_region() -> Result<Area, Failure> {
 
 const SELECTION_SETTLE: Duration = Duration::from_millis(180);
 
-#[instrument]
+#[instrument(err)]
 async fn selectable_rects() -> Result<String, Failure> {
     let output = output("hyprctl", &["-j", "monitors"]).await?;
     if !output.status.success() {
@@ -242,7 +242,7 @@ fn scaled_extent(value: u32, scale: f64) -> u32 {
     ((f64::from(value) / scale).round() as u32).max(1)
 }
 
-#[instrument]
+#[instrument(err)]
 async fn recordings_dir() -> Result<PathBuf, Failure> {
     let videos = match output("xdg-user-dir", &["VIDEOS"]).await {
         Ok(output) if output.status.success() => {
@@ -297,7 +297,7 @@ fn unix_ms() -> u64 {
         .unwrap_or_default()
 }
 
-#[instrument(skip(child))]
+#[instrument(skip(child), err)]
 async fn interrupt(child: &mut Child) -> Result<(), Failure> {
     let Some(id) = child.id() else {
         return Err(Failure::Process {

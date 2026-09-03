@@ -58,7 +58,7 @@ impl Controller {
     }
 
     /// Discovers Linux backlight devices.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn discover_backlight(&self) -> Result<Vec<Device>, Error> {
         let mut first_error = None;
         let mut devices = Vec::new();
@@ -83,7 +83,7 @@ impl Controller {
     }
 
     /// Discovers DDC/CI displays.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn discover_ddc(&self) -> Result<Vec<Device>, Error> {
         let mut first_error = None;
         let mut devices = Vec::new();
@@ -109,14 +109,14 @@ impl Controller {
     }
 
     /// Reads a known brightness [`Device`].
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn read_device(&self, device: &Device) -> Result<Device, Error> {
         let backend = self.backend(device.kind)?;
         backend.read_device(device).await
     }
 
     /// Writes brightness for a known [`Device`].
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn set_brightness(
         &self,
         device: &Device,
@@ -172,7 +172,7 @@ impl Backlight {
         DeviceKind::Backlight
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn list_devices(self) -> Result<Vec<Device>, Error> {
         let mut stream = brightness_crate::brightness_devices();
         let mut devices = Vec::new();
@@ -203,7 +203,7 @@ impl Backlight {
         Ok(sorted_devices(devices))
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn read_device(self, device: &Device) -> Result<Device, Error> {
         let wanted = device
             .id
@@ -243,7 +243,7 @@ impl Backlight {
         })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn set_brightness(self, device_id: &DeviceId, percent: Percent) -> Result<(), Error> {
         let wanted = device_id
             .backlight_name()
@@ -280,7 +280,7 @@ impl DdcUtil {
         DeviceKind::DdcCi
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn list_devices(self) -> Result<Vec<Device>, Error> {
         let output = run_ddcutil(&["detect", "--brief"], self.command_timeout).await?;
         let mut devices = Vec::new();
@@ -300,7 +300,7 @@ impl DdcUtil {
         Ok(sorted_devices(devices))
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn read_device(self, device: &Device) -> Result<Device, Error> {
         let bus = device
             .id
@@ -315,7 +315,7 @@ impl DdcUtil {
         })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn set_brightness(self, device_id: &DeviceId, percent: Percent) -> Result<(), Error> {
         let bus = device_id
             .ddc_bus()
@@ -331,7 +331,7 @@ impl DdcUtil {
         .map(|_| ())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn get_bus_brightness(self, bus: &str) -> Result<Percent, Error> {
         let output = run_ddcutil(
             &["-b", bus, "getvcp", DDC_BRIGHTNESS_VCP, "--brief"],
@@ -345,7 +345,7 @@ impl DdcUtil {
     }
 }
 
-#[instrument]
+#[instrument(err)]
 async fn run_ddcutil(args: &[&str], command_timeout: Duration) -> Result<String, Error> {
     let mut command = ProcessCommand::new("ddcutil");
     command.args(args).kill_on_drop(true);
