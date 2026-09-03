@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hyprbaric/src/bindings/bindings.dart';
+import 'package:hyprbaric/src/features/audio/audio_fader.dart';
 import 'package:hyprbaric/src/features/audio/audio_panel.dart';
 import 'package:hyprbaric/src/features/audio/brightness_control.dart';
 import 'package:hyprbaric/src/features/controls/control_rocker.dart';
@@ -1111,6 +1112,7 @@ void main() {
               onSetAudioVolume: (_, _) {},
               onSetAudioMuted: (_, {required bool muted}) {},
               onSetBrightness: (_) {},
+              onOpenAudioMixer: () {},
               onSetPowerProfile: (_) {},
               onCaptureScreenshot: (_) {},
               onPickColor: () {},
@@ -2809,13 +2811,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Fiber_5G'), findsOneWidget);
-    expect(find.text('AUDIO MIXER'), findsNothing);
+    expect(find.text('MIXER'), findsNothing);
 
     await tester.tap(find.bySemanticsLabel('Audio and display controls'));
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
     expect(find.text('Fiber_5G'), findsNothing);
   });
 
@@ -3008,9 +3010,11 @@ void main() {
   testWidgets('audio popup renders output and input controls', (
     WidgetTester tester,
   ) async {
+    final _RecordingRustDispatcher dispatcher = _RecordingRustDispatcher();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          rustCommandDispatcherProvider.overrideWith((ref) => dispatcher),
           audioStatusProvider.overrideWith(
             (ref) => Stream.value(_audioStatus()),
           ),
@@ -3020,7 +3024,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsNothing);
+    expect(find.text('MIXER'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('bar-volume-knob-icon')),
       findsOneWidget,
@@ -3032,18 +3036,29 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
-    expect(find.text('OUT\nSPEAKERS'), findsOneWidget);
-    expect(find.text('IN\nMIC'), findsOneWidget);
-    expect(find.text('62'), findsOneWidget);
-    expect(find.text('80'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
+    expect(find.text('OUT'), findsOneWidget);
+    expect(find.text('MIC'), findsNWidgets(2));
+    expect(find.text('EVO4 Analog Surround 4.0'), findsOneWidget);
+    expect(find.text('MASTER'), findsOneWidget);
+    expect(find.text('PAVUCONTROL →'), findsOneWidget);
+    expect(find.text('Built-in Mic'), findsOneWidget);
+    expect(find.text('M'), findsNWidgets(2));
     expect(
       find.bySemanticsLabel('EVO4 Analog Surround 4.0 volume'),
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('Built-in Mic volume'), findsOneWidget);
     expect(find.text('pipewire'), findsNothing);
-    expect(find.text('pavucontrol ->'), findsNothing);
+
+    await tester.tap(find.text('PAVUCONTROL →'));
+    await tester.pumpAndSettle();
+
+    expect(
+      dispatcher.intents.map((RustIntent intent) => intent.debugLabel),
+      contains('app_launch:pavucontrol.desktop'),
+    );
+    expect(find.text('MIXER'), findsNothing);
   });
 
   testWidgets('audio panel renders mixer and brightness state directly', (
@@ -3060,16 +3075,19 @@ void main() {
           onSetVolume: (_, _) {},
           onSetMuted: (_, {required bool muted}) {},
           onSetBrightness: (_) {},
+          onOpenMixer: () {},
         ),
       ),
     );
     await tester.pump();
 
-    expect(find.text('AUDIO & DISPLAY'), findsOneWidget);
-    expect(find.text('AUDIO MIXER'), findsOneWidget);
-    expect(find.text('BRIGHTNESS'), findsOneWidget);
-    expect(find.text('62'), findsOneWidget);
-    expect(find.text('80'), findsOneWidget);
+    expect(find.text('MIXER'), findsOneWidget);
+    expect(find.text('DISPLAY 72%'), findsOneWidget);
+    expect(find.text('OUT'), findsOneWidget);
+    expect(find.text('MIC'), findsNWidgets(2));
+    expect(find.text('MASTER'), findsOneWidget);
+    expect(find.text('PAVUCONTROL →'), findsOneWidget);
+    expect(tester.getSize(find.byType(AudioPanel)).width, 336);
   });
 
   testWidgets('brightness control renders available and unavailable states', (
@@ -3153,52 +3171,57 @@ void main() {
     expect(ended.last, changed.last);
   });
 
+  testWidgets('brightness control presents a frame before committing effects', (
+    WidgetTester tester,
+  ) async {
+    final List<int> committed = <int>[];
+
+    await tester.pumpWidget(
+      _scopedSurface(
+        child: BrightnessControl(
+          status: const BrightnessStatusAvailable(device: 'eDP-1', value: 50),
+          loading: false,
+          onSetBrightness: committed.add,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final Offset center = tester.getCenter(find.byType(BrightnessKnob));
+    await tester.sendEventToBinding(
+      PointerScrollEvent(position: center, scrollDelta: const Offset(0, -10)),
+    );
+
+    expect(committed, isEmpty);
+
+    await tester.pump();
+
+    expect(committed, <int>[54]);
+  });
+
   testWidgets('brightness knob painter repaints for visual state changes', (
     WidgetTester tester,
   ) async {
     const BrightnessKnobPainter painter = BrightnessKnobPainter(
       value: 0.42,
       enabled: true,
-      emphasized: false,
     );
 
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: true,
-          emphasized: false,
-        ),
+        const BrightnessKnobPainter(value: 0.42, enabled: true),
       ),
       false,
     );
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.43,
-          enabled: true,
-          emphasized: false,
-        ),
+        const BrightnessKnobPainter(value: 0.43, enabled: true),
       ),
       true,
     );
     expect(
       painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: false,
-          emphasized: false,
-        ),
-      ),
-      true,
-    );
-    expect(
-      painter.shouldRepaint(
-        const BrightnessKnobPainter(
-          value: 0.42,
-          enabled: true,
-          emphasized: true,
-        ),
+        const BrightnessKnobPainter(value: 0.42, enabled: false),
       ),
       true,
     );
@@ -3256,20 +3279,22 @@ void main() {
     final Finder outputFader = find.bySemanticsLabel(
       'EVO4 Analog Surround 4.0 volume',
     );
-    final Finder outputFaderPaint = find
-        .descendant(of: outputFader, matching: find.byType(CustomPaint))
-        .first;
+    final Rect outputFaderRect = tester.getRect(outputFader);
+    // Only the track takes drags; the level ladder beside it is a readout.
+    // The panel renders scaled here, so place the drag proportionally.
+    const double trackFraction =
+        (AudioFaderMetrics.trackLeft + AudioFaderMetrics.trackWidth / 2) /
+        AudioFaderMetrics.width;
+    final double trackX =
+        outputFaderRect.left + outputFaderRect.width * trackFraction;
     final TestGesture drag = await tester.startGesture(
-      tester.getCenter(outputFaderPaint),
+      Offset(trackX, outputFaderRect.center.dy),
     );
-    final Rect outputFaderRect = tester.getRect(outputFaderPaint);
-    await drag.moveTo(
-      Offset(outputFaderRect.center.dx, outputFaderRect.top + 0.1),
-    );
+    await drag.moveTo(Offset(trackX, outputFaderRect.top + 0.1));
     await tester.pump(const Duration(milliseconds: 90));
 
     expect(find.text('VOLUME'), findsOneWidget);
-    expect(find.text('100'), findsOneWidget);
+    expect(find.text('0.0 dB'), findsWidgets);
 
     await drag.up();
   });
@@ -4325,7 +4350,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('VOLUME'), findsOneWidget);
-    expect(find.text('Stereo · 48kHz · 24bit'), findsOneWidget);
+    expect(find.text('Output level'), findsOneWidget);
 
     hotkeys.add(_shortcut(1, const HotkeyEventToggleMute()));
     await tester.pump();

@@ -3,8 +3,38 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../bindings/bindings.dart';
+import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
 import 'audio_chrome.dart';
+
+/// Fixed geometry of one fader, shared by its painter and its hit testing.
+///
+/// [handleCenterY] and [valueForY] are exact inverses. Deriving one without the
+/// other is what let a plain press on the handle move the value.
+abstract final class AudioFaderMetrics {
+  static const double width = 41;
+  static const double height = 152;
+  static const double meterWidth = 6;
+  static const double trackLeft = 15;
+  static const double trackWidth = width - trackLeft;
+  static const double handleHeight = 15;
+  static const double slotWidth = 6;
+  static const int meterSegments = 24;
+
+  static double _travel(double height) =>
+      math.max(0, height - handleHeight);
+
+  static double handleCenterY(double value, double height) =>
+      handleHeight / 2 + (1 - value.clamp(0, 1)) * _travel(height);
+
+  static double valueForY(double y, double height) {
+    final double travel = _travel(height);
+    if (travel <= 0) {
+      return 1;
+    }
+    return (1 - (y - handleHeight / 2) / travel).clamp(0, 1).toDouble();
+  }
+}
 
 class AudioFader extends StatefulWidget {
   const AudioFader({
@@ -35,7 +65,7 @@ class AudioFaderState extends State<AudioFader> {
     _volume = widget.endpoint.volume.toDouble();
     _commits = HyprLiveValue(
       initialValue: widget.endpoint.volume,
-      commitInterval: const Duration(milliseconds: 75),
+      commitInterval: HyprDurations.commit,
     );
   }
 
@@ -56,9 +86,12 @@ class AudioFaderState extends State<AudioFader> {
     bool send = false,
     bool force = false,
   }) {
-    final double next = (100 - (position.dy / size.height) * 100).clamp(0, 100);
-    final int volume = next.round();
-    setState(() => _volume = next);
+    final double next = AudioFaderMetrics.valueForY(
+      position.dy,
+      size.height,
+    );
+    final int volume = (next * 100).round();
+    setState(() => _volume = volume.toDouble());
     widget.onPreviewVolume(volume);
     if (send) {
       _sendVolume(force: force);
@@ -74,82 +107,139 @@ class AudioFaderState extends State<AudioFader> {
     }
   }
 
+  void _nudge(int delta) {
+    setState(
+      () => _volume = (_volume + delta).clamp(0, 100).toDouble(),
+    );
+    widget.onPreviewVolume(_volume.round());
+    _sendVolume(force: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AudioEndpoint endpoint = widget.endpoint;
+    final HyprLevelRamp ramp = HyprLevelRamp.audio.withNominal(widget.accent);
     return Semantics(
       slider: true,
       label: '${endpoint.name} volume',
       value: _volume.round().toString(),
       increasedValue: math.min(100, _volume.round() + 5).toString(),
       decreasedValue: math.max(0, _volume.round() - 5).toString(),
-      onIncrease: () {
-        setState(() => _volume = math.min(100, _volume + 5));
-        widget.onPreviewVolume(_volume.round());
-        _sendVolume(force: true);
-      },
-      onDecrease: () {
-        setState(() => _volume = math.max(0, _volume - 5));
-        widget.onPreviewVolume(_volume.round());
-        _sendVolume(force: true);
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.resizeUpDown,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: SizedBox(
-          width: 44,
-          height: 168,
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final Size size = constraints.biggest;
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (TapDownDetails details) {
-                  _setFromLocalPosition(
-                    details.localPosition,
-                    size,
-                    send: true,
-                    force: true,
-                  );
-                },
-                onTapUp: (_) => _sendVolume(force: true),
-                onVerticalDragStart: (DragStartDetails details) {
-                  setState(() => _commits.begin(_volume.round()));
-                  _setFromLocalPosition(
-                    details.localPosition,
-                    size,
-                    send: true,
-                    force: true,
-                  );
-                },
-                onVerticalDragUpdate: (DragUpdateDetails details) {
-                  _setFromLocalPosition(
-                    details.localPosition,
-                    size,
-                    send: true,
-                  );
-                },
-                onVerticalDragEnd: (_) {
-                  setState(() => _commits.end());
-                  _sendVolume(force: true);
-                },
-                onVerticalDragCancel: () {
-                  setState(() => _commits.end());
-                  _sendVolume(force: true);
-                },
-                child: CustomPaint(
-                  painter: AudioFaderPainter(
-                    value: _volume / 100,
-                    accent: widget.accent,
-                    emphasized: _hovered || _commits.active,
-                    muted: endpoint.muted,
-                  ),
+      onIncrease: () => _nudge(5),
+      onDecrease: () => _nudge(-5),
+      child: SizedBox(
+        width: AudioFaderMetrics.width,
+        height: AudioFaderMetrics.height,
+        child: Stack(
+          children: <Widget>[
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: AudioFaderMetrics.meterWidth,
+              child: CustomPaint(
+                painter: HyprSegmentedMeterPainter(
+                  value: endpoint.muted ? 0 : _volume / 100,
+                  ramp: ramp,
+                  segments: AudioFaderMetrics.meterSegments,
+                  direction: HyprMeterDirection.bottomToTop,
+                  segmentRadius: 1.5,
+                  trackColor: AudioMixerColors.rail,
+                  trackBorderColor: AudioMixerColors.railBorder,
                 ),
+              ),
+            ),
+            Positioned(
+              left: AudioFaderMetrics.trackLeft,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              child: _FaderTrack(
+                value: _volume / 100,
+                ramp: ramp,
+                emphasized: _hovered || _commits.active,
+                muted: endpoint.muted,
+                onHoverChanged: (bool hovered) =>
+                    setState(() => _hovered = hovered),
+                onPreview: _setFromLocalPosition,
+                onBegin: () => setState(() => _commits.begin(_volume.round())),
+                onEnd: () {
+                  setState(() => _commits.end());
+                  _sendVolume(force: true);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The grabbable part of a fader. Hit testing stops at the track edge so the
+/// level ladder beside it stays a readout rather than a control.
+class _FaderTrack extends StatelessWidget {
+  const _FaderTrack({
+    required this.value,
+    required this.ramp,
+    required this.emphasized,
+    required this.muted,
+    required this.onHoverChanged,
+    required this.onPreview,
+    required this.onBegin,
+    required this.onEnd,
+  });
+
+  final double value;
+  final HyprLevelRamp ramp;
+  final bool emphasized;
+  final bool muted;
+  final ValueChanged<bool> onHoverChanged;
+  final void Function(Offset position, Size size, {bool send, bool force})
+  onPreview;
+  final VoidCallback onBegin;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeUpDown,
+      onEnter: (_) => onHoverChanged(true),
+      onExit: (_) => onHoverChanged(false),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Size size = constraints.biggest;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (TapDownDetails details) => onPreview(
+              details.localPosition,
+              size,
+              send: true,
+              force: true,
+            ),
+            onVerticalDragStart: (DragStartDetails details) {
+              onBegin();
+              onPreview(
+                details.localPosition,
+                size,
+                send: true,
+                force: true,
               );
             },
-          ),
-        ),
+            onVerticalDragUpdate: (DragUpdateDetails details) =>
+                onPreview(details.localPosition, size, send: true),
+            onVerticalDragEnd: (_) => onEnd(),
+            onVerticalDragCancel: onEnd,
+            child: CustomPaint(
+              painter: AudioFaderPainter(
+                value: value,
+                ramp: ramp,
+                emphasized: emphasized,
+                muted: muted,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -162,104 +252,104 @@ class AudioDisabledFader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final HyprLevelRamp ramp = HyprLevelRamp.audio.withNominal(accent);
     return SizedBox(
-      width: 44,
-      height: 168,
-      child: CustomPaint(
-        painter: AudioFaderPainter(
-          value: 0,
-          accent: accent,
-          emphasized: false,
-          muted: true,
-        ),
+      width: AudioFaderMetrics.width,
+      height: AudioFaderMetrics.height,
+      child: Stack(
+        children: <Widget>[
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: AudioFaderMetrics.meterWidth,
+            child: CustomPaint(
+              painter: HyprSegmentedMeterPainter(
+                value: 0,
+                ramp: ramp,
+                segments: AudioFaderMetrics.meterSegments,
+                direction: HyprMeterDirection.bottomToTop,
+                segmentRadius: 1.5,
+                trackColor: AudioMixerColors.rail,
+                trackBorderColor: AudioMixerColors.railBorder,
+              ),
+            ),
+          ),
+          Positioned(
+            left: AudioFaderMetrics.trackLeft,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            child: CustomPaint(
+              painter: AudioFaderPainter(
+                value: 0,
+                ramp: ramp,
+                emphasized: false,
+                muted: true,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+/// Paints the slot, level fill and handle of one fader.
 class AudioFaderPainter extends CustomPainter {
   const AudioFaderPainter({
     required this.value,
-    required this.accent,
+    required this.ramp,
     required this.emphasized,
     required this.muted,
   });
 
   final double value;
-  final Color accent;
+  final HyprLevelRamp ramp;
   final bool emphasized;
   final bool muted;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final RRect well = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(8),
+    final Rect track = Offset.zero & size;
+    final Rect slot = Rect.fromCenter(
+      center: track.center,
+      width: AudioFaderMetrics.slotWidth,
+      height: track.height,
     );
     canvas.drawRRect(
-      well,
+      RRect.fromRectAndRadius(slot, const Radius.circular(3)),
       Paint()
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[Color(0x26121C25), Color(0x141E9BCF)],
-        ).createShader(well.outerRect),
-    );
-    final Rect rail = Rect.fromLTRB(8, 12, size.width - 8, size.height - 10);
-    final RRect railShape = RRect.fromRectAndRadius(
-      rail,
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(railShape, Paint()..color = AudioMixerColors.rail);
-    canvas.drawRRect(
-      railShape.deflate(0.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = AudioMixerColors.railBorder,
+          colors: <Color>[Color(0xFF15161A), Color(0xFF222329)],
+        ).createShader(slot),
     );
 
-    const int segments = 20;
-    const double gap = 3;
-    final double segmentHeight =
-        (rail.height - gap * (segments - 1)) / segments;
-    final int activeSegments = muted
-        ? 0
-        : (value.clamp(0, 1) * segments).round().clamp(0, segments);
-    final Paint segmentPaint = Paint();
-    for (int i = 0; i < segments; i += 1) {
-      final bool active = i < activeSegments;
-      final double top = rail.bottom - (i + 1) * segmentHeight - i * gap;
-      final Rect segment = Rect.fromLTWH(
-        rail.left + 4,
-        top,
-        rail.width - 8,
-        segmentHeight,
+    final double handleCenterY = AudioFaderMetrics.handleCenterY(
+      value,
+      track.height,
+    );
+    final Color levelColor = ramp.colorAt(value.clamp(0, 1));
+    if (!muted) {
+      final Rect fill = Rect.fromLTRB(
+        slot.center.dx - 1,
+        handleCenterY,
+        slot.center.dx + 1,
+        slot.bottom,
       );
-      segmentPaint.color = active
-          ? accent.withValues(alpha: 0.88)
-          : AudioMixerColors.slot;
       canvas.drawRRect(
-        RRect.fromRectAndRadius(segment, const Radius.circular(1.5)),
-        segmentPaint,
-      );
-      canvas.drawLine(
-        Offset(segment.left, segment.bottom),
-        Offset(segment.right, segment.bottom),
-        Paint()
-          ..color = AudioMixerColors.slotBorder.withValues(
-            alpha: active ? 0.35 : 0.24,
-          )
-          ..strokeWidth = 0.5,
+        RRect.fromRectAndRadius(fill, const Radius.circular(1)),
+        Paint()..color = levelColor,
       );
     }
 
-    final double handleCenterY = rail.bottom - value.clamp(0, 1) * rail.height;
     final Rect handleRect = Rect.fromCenter(
-      center: Offset(size.width / 2, handleCenterY),
-      width: 33,
-      height: 17,
-    ).translate(0, -1);
+      center: Offset(track.center.dx, handleCenterY),
+      width: AudioFaderMetrics.trackWidth,
+      height: AudioFaderMetrics.handleHeight,
+    );
     final RRect handle = RRect.fromRectAndRadius(
       handleRect,
       const Radius.circular(3.5),
@@ -280,24 +370,19 @@ class AudioFaderPainter extends CustomPainter {
             ? AudioMixerColors.accentBorder
             : AudioMixerColors.handleBorder,
     );
-    final RRect handleFace = RRect.fromRectAndRadius(
-      handleRect.deflate(5).translate(0, -0.5),
-      const Radius.circular(1.5),
-    );
-    canvas.drawRRect(handleFace, Paint()..color = AudioMixerColors.handleFace);
     canvas.drawRRect(
-      handleFace.deflate(0.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.6
-        ..color = AudioMixerColors.handleLine,
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: handleRect.center, width: 20, height: 1),
+        const Radius.circular(1.5),
+      ),
+      Paint()..color = muted ? HyprColors.textFaint : levelColor,
     );
   }
 
   @override
   bool shouldRepaint(covariant AudioFaderPainter oldDelegate) {
     return value != oldDelegate.value ||
-        accent != oldDelegate.accent ||
+        ramp != oldDelegate.ramp ||
         emphasized != oldDelegate.emphasized ||
         muted != oldDelegate.muted;
   }

@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 
 import '../../widgets/hypr_surface.dart';
 import '../../widgets/primitives/primitives.dart';
-import 'audio_chrome.dart';
 import 'brightness_knob_painter.dart';
 import 'brightness_knob_readout.dart';
+
+/// Visual contexts supported by [BrightnessKnob].
+enum BrightnessKnobPresentation { labeled, console }
 
 class BrightnessKnob extends StatefulWidget {
   const BrightnessKnob({
@@ -15,12 +17,14 @@ class BrightnessKnob extends StatefulWidget {
     required this.enabled,
     required this.onChanged,
     required this.onChangeEnd,
+    this.presentation = BrightnessKnobPresentation.labeled,
   });
 
   final int value;
   final bool enabled;
   final ValueChanged<int> onChanged;
   final ValueChanged<int> onChangeEnd;
+  final BrightnessKnobPresentation presentation;
 
   @override
   State<BrightnessKnob> createState() => BrightnessKnobState();
@@ -28,12 +32,10 @@ class BrightnessKnob extends StatefulWidget {
 
 class BrightnessKnobState extends State<BrightnessKnob> {
   static const double _dragDistance = 150;
-  static const double _knobDimension = 76;
 
   late final HyprLiveValue _value;
   double _startY = 0;
   int _startValue = 0;
-  bool _hovered = false;
 
   @override
   void initState() {
@@ -103,14 +105,53 @@ class BrightnessKnobState extends State<BrightnessKnob> {
 
   @override
   Widget build(BuildContext context) {
+    final double knobDimension = switch (widget.presentation) {
+      BrightnessKnobPresentation.labeled => 76,
+      BrightnessKnobPresentation.console => 104,
+    };
+    final double target = widget.value / 100;
+    final Widget knob = RepaintBoundary(
+      child: SizedBox.square(
+        dimension: knobDimension,
+        child: widget.presentation == BrightnessKnobPresentation.console
+            ? TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: target),
+                duration: const Duration(milliseconds: 80),
+                curve: Curves.easeOutCubic,
+                builder: (BuildContext context, double pointer, Widget? child) {
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: target),
+                    duration: HyprMotion.popup,
+                    curve: HyprMotion.popupCurve,
+                    builder:
+                        (BuildContext context, double lamps, Widget? child) {
+                          return CustomPaint(
+                            painter: BrightnessKnobPainter(
+                              value: pointer,
+                              lampValue: lamps,
+                              enabled: widget.enabled,
+                              console: true,
+                            ),
+                          );
+                        },
+                  );
+                },
+              )
+            : CustomPaint(
+                painter: BrightnessKnobPainter(
+                  value: target,
+                  enabled: widget.enabled,
+                ),
+              ),
+      ),
+    );
+
     return MouseRegion(
       cursor: widget.enabled
           ? (_value.active
                 ? SystemMouseCursors.grabbing
                 : SystemMouseCursors.resizeUpDown)
           : MouseCursor.defer,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
       child: Listener(
         onPointerSignal: _handlePointerSignal,
         child: GestureDetector(
@@ -119,32 +160,19 @@ class BrightnessKnobState extends State<BrightnessKnob> {
           onVerticalDragUpdate: _updateDrag,
           onVerticalDragEnd: (_) => _endDrag(),
           onVerticalDragCancel: _endDrag,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              SizedBox.square(
-                dimension: _knobDimension,
-                child: CustomPaint(
-                  painter: BrightnessKnobPainter(
-                    value: widget.value / 100,
-                    enabled: widget.enabled,
-                    emphasized: _hovered || _value.active,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              BrightnessKnobReadout(value: widget.value),
-              const SizedBox(height: 2),
-              Text(
-                'BRIGHTNESS',
-                style: HyprTypography.compactMonoStrong.copyWith(
-                  color: AudioMixerColors.label,
-                  fontSize: HyprTypography.size(9),
-                  letterSpacing: 1.44,
-                ),
-              ),
-            ],
-          ),
+          child: switch (widget.presentation) {
+            BrightnessKnobPresentation.console => knob,
+            BrightnessKnobPresentation.labeled => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                knob,
+                const SizedBox(height: 10),
+                BrightnessKnobReadout(value: widget.value),
+                const SizedBox(height: 2),
+                Text('BRIGHTNESS', style: HyprTypography.mixerLabel),
+              ],
+            ),
+          },
         ),
       ),
     );

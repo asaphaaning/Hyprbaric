@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../bindings/bindings.dart';
@@ -25,45 +27,59 @@ extension AudioStatusView on AudioStatus {
   };
 }
 
+/// Materials specific to the mixer console.
+///
+/// Only surfaces the console invents live here. Text, level bands and recessed
+/// housings come from [HyprColors] so the mixer reads as the same instrument as
+/// the rest of the bar.
 abstract final class AudioMixerColors {
-  static const Color rail = Color(0x3A101A22);
-  static const Color railBorder = Color(0x30B4D8E8);
-  static const Color slot = Color(0x4515333B);
-  static const Color slotBorder = Color(0x33214756);
-  static const Color output = Color(0xFF3BCB7C);
-  static const Color input = Color(0xFF00B8C9);
-  static const Color handle = Color(0xFF323D4D);
-  static const Color handleFace = Color(0xFF677689);
-  static const Color handleLine = Color(0xFF93A2B6);
-  static const Color handleBorder = Color(0xFF17212D);
+  static const Color chassisTop = Color(0xF0161A20);
+  static const Color chassisBottom = Color(0xFA0E1218);
+
+  /// The console's own material, declared to [HyprPopoverPanel] rather than
+  /// painted over a transparent one.
+  static const LinearGradient chassis = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[chassisTop, chassisBottom],
+  );
+  static const Color deckTop = Color(0xFF242527);
+  static const Color deckMiddle = Color(0xFF202123);
+  static const Color deckBottom = Color(0xFF1C1D1F);
+  static const Color console = Color(0xF5090A0C);
+  static const Color rail = Color(0xFF0C0E11);
+  static const Color railBorder = Color(0x1CFFFFFF);
+  static const Color handle = Color(0xFF34363B);
+  static const Color handleBorder = Color(0xFF16181C);
   static const Color accentBorder = HyprColors.accentSoft;
-  static const Color label = Color(0x9A9AA5AF);
-  static const Color quiet = Color(0xB6A2ACB7);
-  static const Color value = Color(0xFFE8EEF5);
+
+  /// Output channel identity. Doubles as the nominal band of its meter.
+  static const Color output = HyprColors.levelNominal;
+
+  /// Input channel identity, kept in the accent family so a glance separates
+  /// the two channels.
+  static const Color input = Color(0xFF00B8C9);
 }
 
-class AudioMixerDivider extends StatelessWidget {
-  const AudioMixerDivider({super.key});
+/// Decibels for a PipeWire or PulseAudio volume percentage.
+///
+/// Both express volume on a cubic curve, so a percentage `p` carries a linear
+/// amplitude of `(p / 100)^3` and therefore `60 * log10(p / 100)` decibels.
+/// 50% is −18.1 dB, the same figure `pavucontrol` reports for that slider
+/// position.
+double audioDecibels(int volume) =>
+    60 * math.log(volume.clamp(1, 100) / 100) / math.ln10;
 
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Colors.transparent,
-            HyprColors.borderSoft.withValues(alpha: 0.75),
-            HyprColors.borderSoft.withValues(alpha: 0.75),
-            Colors.transparent,
-          ],
-          stops: const <double>[0, 0.08, 0.92, 1],
-        ),
-      ),
-      child: const SizedBox(width: 1),
-    );
+String audioDecibelReadout(int volume, {required bool muted}) {
+  if (muted || volume <= 0) {
+    return '−∞';
   }
+
+  final double decibels = audioDecibels(volume);
+  final String text = decibels <= -100
+      ? decibels.toStringAsFixed(0)
+      : decibels.toStringAsFixed(1);
+  return text.replaceFirst('-', '−');
 }
 
 class AudioMessage extends StatelessWidget {
@@ -77,7 +93,7 @@ class AudioMessage extends StatelessWidget {
       message,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: HyprTypography.popRow.copyWith(color: AudioMixerColors.label),
+      style: HyprTypography.popRow.copyWith(color: HyprColors.textFaint),
     );
   }
 }

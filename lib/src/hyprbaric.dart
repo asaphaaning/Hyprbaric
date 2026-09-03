@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'bindings/bindings.dart';
 import 'features/launcher/app_launcher.dart';
+import 'features/rust_commands.dart';
 import 'features/session/session_launcher.dart';
 import 'features/settings/settings_overlay.dart';
 import 'features/setup/setup_guide_host.dart';
@@ -294,7 +295,7 @@ class _BarViewState extends ConsumerState<_BarView> {
         ?.value;
     switch (status) {
       case BrightnessStatusAvailable(:final value):
-        _setBrightness(value + delta);
+        _setBrightness(value + delta, feedback: BrightnessFeedback.osd);
       case _:
         return;
     }
@@ -487,8 +488,20 @@ class _BarViewState extends ConsumerState<_BarView> {
     ref.read(audioControllerProvider.notifier).setMuted(kind, muted: muted);
   }
 
-  void _setBrightness(int value) {
-    ref.read(audioControllerProvider.notifier).setBrightness(value);
+  void _setBrightness(int value, {required BrightnessFeedback feedback}) {
+    ref
+        .read(audioControllerProvider.notifier)
+        .setBrightness(value, feedback: feedback);
+  }
+
+  /// The mixer knob already shows the value it is setting.
+  void _setBrightnessFromPanel(int value) =>
+      _setBrightness(value, feedback: BrightnessFeedback.none);
+
+  void _openAudioMixer() {
+    ref
+        .read(rustCommandDispatcherProvider)
+        .dispatch(const LauncherIntent.launch('pavucontrol.desktop'));
   }
 
   void _setPowerProfile(PowerProfile profile) {
@@ -675,7 +688,8 @@ class _BarViewState extends ConsumerState<_BarView> {
                             onOpenNetworkSettings: _openNetworkSettings,
                             onSetAudioVolume: _setAudioVolume,
                             onSetAudioMuted: _setAudioMuted,
-                            onSetBrightness: _setBrightness,
+                            onSetBrightness: _setBrightnessFromPanel,
+                            onOpenAudioMixer: _openAudioMixer,
                             onSetPowerProfile: _setPowerProfile,
                             onCaptureScreenshot: _captureScreenshot,
                             onPickColor: _pickColor,

@@ -15,7 +15,7 @@ use std::{collections::HashMap, process::ExitStatus, sync::Arc, time::Duration};
 use serde::Deserialize;
 use tokio::{
     sync::{broadcast, mpsc},
-    time::{MissedTickBehavior, interval, sleep},
+    time::{MissedTickBehavior, interval, sleep, timeout},
 };
 use tracing::instrument;
 
@@ -47,6 +47,8 @@ const DDC_BRIGHTNESS_VCP: &str = "10";
 /// # ddc_discovery_interval = "15m"
 /// ddc_write_debounce = "300ms"
 /// ddc_command_timeout = "1200ms"
+/// # Backstop for a backend write that never returns.
+/// write_timeout = "5s"
 /// ```
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -56,6 +58,7 @@ pub struct Configuration {
     ddc_discovery_interval: Option<Cadence>,
     ddc_write_debounce: Cadence,
     ddc_command_timeout: Cadence,
+    write_timeout: Cadence,
 }
 
 impl Default for Configuration {
@@ -66,6 +69,7 @@ impl Default for Configuration {
             ddc_discovery_interval: None,
             ddc_write_debounce: Cadence::milliseconds(300),
             ddc_command_timeout: Cadence::milliseconds(1200),
+            write_timeout: Cadence::seconds(5),
         }
     }
 }
@@ -100,6 +104,10 @@ enum Work {
     PollBacklight,
     DiscoveryFinished(DiscoveryMode, Result<Vec<Device>, Error>),
     Set(Target, Percent),
+    WriteReady {
+        device_id: DeviceId,
+        generation: u64,
+    },
     WriteFinished {
         device_id: DeviceId,
         generation: u64,
@@ -108,6 +116,81 @@ enum Work {
     },
     Resync(DeviceId),
     ResyncFinished(Result<Device, Error>),
+}
+
+/// The latest value waiting to cross one brightness backend boundary.
+#[derive(Clone, Debug)]
+struct WriteRequest {
+    device: Device,
+    value: Percent,
+}
+
+/// Per-device write lifecycle used to serialize and coalesce hardware access.
+///
+/// A device holds at most one open debounce window and at most one active
+/// backend write. Newer values always replace the value already held, so the
+/// window keeps its original deadline instead of restarting: latency stays
+/// bounded by one debounce even while the user is dragging.
+#[derive(Debug)]
+enum WriteState {
+    /// The debounce window is open and holds the newest value seen.
+    Waiting {
+        generation: u64,
+        request: WriteRequest,
+    },
+    /// One backend write is active and at most one newer value is retained.
+    Running {
+        generation: u64,
+        next: Option<WriteRequest>,
+    },
+}
+
+impl WriteState {
+    const fn waiting(generation: u64, request: WriteRequest) -> Self {
+        Self::Waiting {
+            generation,
+            request,
+        }
+    }
+
+    /// Replaces the value this device is holding, whichever phase it is in.
+    fn queue(&mut self, request: WriteRequest) {
+        match self {
+            Self::Waiting { request: held, .. } => *held = request,
+            Self::Running { next, .. } => *next = Some(request),
+        }
+    }
+
+    /// Takes the held value when `generation` still owns the debounce window.
+    fn begin(&mut self, generation: u64) -> Option<WriteRequest> {
+        let Self::Waiting {
+            generation: waiting,
+            request,
+        } = self
+        else {
+            return None;
+        };
+        if *waiting != generation {
+            return None;
+        }
+
+        let request = request.clone();
+        *self = Self::Running {
+            generation,
+            next: None,
+        };
+        Some(request)
+    }
+
+    fn finish(self, generation: u64) -> Result<Option<WriteRequest>, Self> {
+        match self {
+            Self::Running {
+                generation: running,
+                next,
+            } if running == generation => Ok(next),
+            state @ (Self::Waiting { .. } | Self::Running { .. }) => Err(state),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -125,7 +208,7 @@ struct Actor {
     config: Configuration,
     snapshot: Snapshot,
     running: Running,
-    writes: HashMap<DeviceId, u64>,
+    writes: HashMap<DeviceId, WriteState>,
     next_generation: u64,
     last_error: Option<String>,
 }
@@ -232,6 +315,10 @@ impl Actor {
             Work::PollBacklight => self.start_discovery(DiscoveryMode::Backlight),
             Work::DiscoveryFinished(mode, result) => self.finish_discovery(mode, result),
             Work::Set(target, value) => self.set(target, value),
+            Work::WriteReady {
+                device_id,
+                generation,
+            } => self.start_write(device_id, generation),
             Work::WriteFinished {
                 device_id,
                 generation,
@@ -306,31 +393,79 @@ impl Actor {
 
     #[instrument(skip(self))]
     fn schedule_write(&mut self, device: Device, value: Percent) {
+        let request = WriteRequest { device, value };
+        let device_id = request.device.id.clone();
+
+        if let Some(state) = self.writes.get_mut(&device_id) {
+            state.queue(request);
+            return;
+        }
+
         self.next_generation = self.next_generation.wrapping_add(1);
         let generation = self.next_generation;
-        self.writes.insert(device.id.clone(), generation);
-
-        let delay = match device.kind {
+        let delay = match request.device.kind {
             DeviceKind::Backlight => Duration::ZERO,
             DeviceKind::DdcCi => self.config.ddc_write_debounce.duration(),
         };
-        let command = PublicCommand::SetLevel { value };
-        let controller = self.controller.clone();
+        self.writes
+            .insert(device_id.clone(), WriteState::waiting(generation, request));
+
         let commands = self.commands.clone();
         tokio::spawn(async move {
             if !delay.is_zero() {
                 sleep(delay).await;
             }
-            let device_id = device.id.clone();
-            let result = controller.set_brightness(&device, value).await;
-            let _ = commands
-                .send(Work::WriteFinished {
-                    device_id,
-                    generation,
-                    command,
-                    result,
-                })
-                .await;
+            drop(
+                commands
+                    .send(Work::WriteReady {
+                        device_id,
+                        generation,
+                    })
+                    .await,
+            );
+        });
+    }
+
+    #[instrument(skip(self))]
+    fn start_write(&mut self, device_id: DeviceId, generation: u64) {
+        let Some(state) = self.writes.get_mut(&device_id) else {
+            return;
+        };
+        let Some(request) = state.begin(generation) else {
+            return;
+        };
+
+        let controller = self.controller.clone();
+        let commands = self.commands.clone();
+        let watchdog = self.config.write_timeout.duration();
+        tokio::spawn(async move {
+            let command = PublicCommand::SetLevel {
+                value: request.value,
+            };
+            // A backend that never returns would otherwise pin this device in
+            // `Running` forever, silently swallowing every later write.
+            let result = match timeout(
+                watchdog,
+                controller.set_brightness(&request.device, request.value),
+            )
+            .await
+            {
+                Ok(result) => result,
+                Err(_) => Err(Error::CommandTimedOut {
+                    program: request.device.kind.backend_name(),
+                    timeout: watchdog,
+                }),
+            };
+            drop(
+                commands
+                    .send(Work::WriteFinished {
+                        device_id,
+                        generation,
+                        command,
+                        result,
+                    })
+                    .await,
+            );
         });
     }
 
@@ -342,14 +477,33 @@ impl Actor {
         command: PublicCommand,
         result: Result<(), Error>,
     ) {
-        if self.writes.get(&device_id).copied() != Some(generation) {
-            return;
-        }
-        self.writes.remove(&device_id);
+        let next = match self
+            .writes
+            .remove(&device_id)
+            .map(|state| state.finish(generation))
+        {
+            Some(Ok(next)) => next,
+            Some(Err(state)) => {
+                self.writes.insert(device_id.clone(), state);
+                return;
+            }
+            None => return,
+        };
 
         if let Err(error) = result {
             self.send_command(command, Err(error));
-            let _ = self.commands.try_send(Work::Resync(device_id));
+            if next.is_none() {
+                // A dropped resync would strand the optimistic value, so wait
+                // for capacity off-actor rather than discarding it.
+                let commands = self.commands.clone();
+                tokio::spawn(async move {
+                    drop(commands.send(Work::Resync(device_id)).await);
+                });
+            }
+        }
+
+        if let Some(next) = next {
+            self.schedule_write(next.device, next.value);
         }
     }
 
@@ -493,7 +647,72 @@ pub enum Error {
 mod tests {
     use std::time::Duration;
 
-    use super::Configuration;
+    use super::{Configuration, WriteRequest, WriteState};
+    use crate::brightness::domain::{Device, DeviceId, DeviceKind, Percent};
+
+    fn ddc_request(value: u8) -> WriteRequest {
+        WriteRequest {
+            device: Device {
+                id: DeviceId::ddc("5", "display"),
+                label: "Display".to_owned(),
+                kind: DeviceKind::DdcCi,
+                value: Percent::new(value),
+            },
+            value: Percent::new(value),
+        }
+    }
+
+    #[test]
+    fn stale_debounce_generation_cannot_start_a_write() {
+        let mut state = WriteState::waiting(2, ddc_request(10));
+
+        assert!(state.begin(1).is_none());
+        assert!(state.begin(2).is_some());
+    }
+
+    #[test]
+    fn debounce_window_coalesces_without_restarting() {
+        let mut state = WriteState::waiting(1, ddc_request(10));
+
+        state.queue(ddc_request(40));
+        state.queue(ddc_request(80));
+
+        // The original generation still owns the window, so the timer armed for
+        // the first value is the one that fires: a sustained drag cannot push
+        // the write past its deadline.
+        let request = state
+            .begin(1)
+            .expect("original generation should still own the window");
+        assert_eq!(request.value, Percent::new(80));
+    }
+
+    #[test]
+    fn running_write_retains_only_the_latest_value() {
+        let mut state = WriteState::waiting(1, ddc_request(10));
+        assert!(state.begin(1).is_some());
+
+        state.queue(ddc_request(40));
+        state.queue(ddc_request(80));
+
+        let next = state
+            .finish(1)
+            .expect("running generation should finish")
+            .expect("latest write should remain queued");
+        assert_eq!(next.value, Percent::new(80));
+    }
+
+    #[test]
+    fn finished_write_without_a_successor_leaves_nothing_queued() {
+        let mut state = WriteState::waiting(3, ddc_request(55));
+        assert!(state.begin(3).is_some());
+
+        assert!(
+            state
+                .finish(3)
+                .expect("running generation should finish")
+                .is_none()
+        );
+    }
 
     #[test]
     fn config_accepts_human_brightness_timings() {

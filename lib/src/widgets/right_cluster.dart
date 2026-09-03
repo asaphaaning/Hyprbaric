@@ -48,6 +48,7 @@ class RightCluster extends ConsumerWidget {
     required this.onSetAudioVolume,
     required this.onSetAudioMuted,
     required this.onSetBrightness,
+    required this.onOpenAudioMixer,
     required this.onSetPowerProfile,
     required this.onCaptureScreenshot,
     required this.onPickColor,
@@ -94,6 +95,7 @@ class RightCluster extends ConsumerWidget {
   final void Function(AudioEndpointKind kind, {required bool muted})
   onSetAudioMuted;
   final ValueChanged<int> onSetBrightness;
+  final VoidCallback onOpenAudioMixer;
   final ValueChanged<PowerProfile> onSetPowerProfile;
   final ValueChanged<ScreenshotMode> onCaptureScreenshot;
   final VoidCallback onPickColor;
@@ -245,6 +247,10 @@ class RightCluster extends ConsumerWidget {
                                 onSetVolume: onSetAudioVolume,
                                 onSetMuted: onSetAudioMuted,
                                 onSetBrightness: onSetBrightness,
+                                onOpenMixer: () {
+                                  onOpenAudioMixer();
+                                  controller.dismiss();
+                                },
                               );
                             },
                       );
