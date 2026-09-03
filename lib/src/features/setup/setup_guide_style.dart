@@ -137,18 +137,20 @@ class SetupGuideButton extends StatefulWidget {
 
 class _SetupGuideButtonState extends State<SetupGuideButton> {
   bool _hovered = false;
+  bool _focused = false;
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final bool primary = widget.kind == SetupGuideButtonKind.primary;
     final Color accent = context.setupGuideAccent;
+    final bool highlighted = _hovered || _focused;
     final LinearGradient face = primary
         ? LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: <Color>[
-              Color.lerp(accent, Colors.white, _hovered ? .20 : .11)!,
+              Color.lerp(accent, Colors.white, highlighted ? .20 : .11)!,
               Color.lerp(accent, Colors.black, .13)!,
             ],
           )
@@ -156,69 +158,87 @@ class _SetupGuideButtonState extends State<SetupGuideButton> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: <Color>[
-              _hovered ? const Color(0xFF55575F) : const Color(0xFF4B4D55),
-              _hovered ? const Color(0xFF3C3E46) : const Color(0xFF35373E),
+              highlighted ? const Color(0xFF55575F) : const Color(0xFF4B4D55),
+              highlighted ? const Color(0xFF3C3E46) : const Color(0xFF35373E),
             ],
           );
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onPressed();
+    return Semantics(
+      button: true,
+      label: widget.label,
+      focused: _focused,
+      child: FocusableActionDetector(
+        mouseCursor: SystemMouseCursors.click,
+        onShowFocusHighlight: (bool value) => setState(() => _focused = value),
+        onShowHoverHighlight: (bool value) {
+          setState(() {
+            _hovered = value;
+            if (!value) {
+              _pressed = false;
+            }
+          });
         },
-        child: AnimatedScale(
-          scale: _pressed ? .97 : 1,
-          duration: const Duration(milliseconds: 90),
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: const Color(0xFF24262D),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xD9000000)),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x99000000),
-                  blurRadius: 5,
-                  spreadRadius: -2,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (ActivateIntent intent) {
+              widget.onPressed();
+              return null;
+            },
+          ),
+        },
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onPressed();
+          },
+          child: AnimatedScale(
+            scale: _pressed ? .97 : 1,
+            duration: const Duration(milliseconds: 90),
             child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                gradient: face,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const Color(0xA3000000)),
+                color: const Color(0xFF24262D),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xD9000000)),
                 boxShadow: const <BoxShadow>[
                   BoxShadow(
-                    color: Color(0x24FFFFFF),
-                    offset: Offset(0, 1),
-                    blurStyle: BlurStyle.inner,
-                  ),
-                  BoxShadow(
-                    color: Color(0x59000000),
-                    offset: Offset(0, -1),
-                    blurStyle: BlurStyle.inner,
+                    color: Color(0x99000000),
+                    blurRadius: 5,
+                    spreadRadius: -2,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: Text(
-                widget.label.toUpperCase(),
-                style: setupMono(
-                  color: primary ? Colors.white : const Color(0xFFCACBD0),
-                  size: 10,
-                  spacing: 1.3,
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: face,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0xA3000000)),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x24FFFFFF),
+                      offset: Offset(0, 1),
+                      blurStyle: BlurStyle.inner,
+                    ),
+                    BoxShadow(
+                      color: Color(0x59000000),
+                      offset: Offset(0, -1),
+                      blurStyle: BlurStyle.inner,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.label.toUpperCase(),
+                  style: setupMono(
+                    color: primary ? Colors.white : const Color(0xFFCACBD0),
+                    size: 10,
+                    spacing: 1.3,
+                  ),
                 ),
               ),
             ),

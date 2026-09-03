@@ -5,9 +5,11 @@ description: How Hyprbaric's first-run appearance guide starts, remembers comple
 kicker: First launch
 ---
 
-Hyprbaric opens a short appearance guide the first time it starts. The guide previews transparency, accent colour, bar position, and workspace labels before applying the choices to the live bar.
+Hyprbaric opens a short appearance guide the first time it starts. The guide previews transparency, accent colour, bar position, and workspace labels before applying the choices to the live bar. Pressing **Esc** skips from any step.
 
-Selecting **Finish** or **Skip setup** records completion in the user configuration. The guide will not open automatically again, but **Settings → About → Run setup guide again** can launch it at any time. Running it manually does not re-enable automatic startup.
+Selecting **Finish** keeps the tried choices and records completion in the user configuration. **Skip setup** records completion too, but reverts transparency, accent, position, and workspace labels to the values from before the guide opened. Either way the guide will not open automatically again, but **Settings → About → Run setup guide again** can launch it at any time. Running it manually does not re-enable automatic startup.
+
+If completion cannot be written, the bar toasts the reason and reopens the guide so nothing is lost silently.
 
 ## Disable the automatic guide
 
@@ -18,10 +20,10 @@ To prevent the guide from ever opening automatically, add this to `config.toml`:
 startup = "never"
 ```
 
-The default is `startup = "once"`. Hyprbaric owns the `completed` value and writes it after **Finish** or **Skip setup**; it should not normally need to be edited by hand.
+The default is `startup = "once"`. Hyprbaric owns the `completed` value and writes it after **Finish** or **Skip setup**; it should not normally need to be edited by hand. A malformed `[setup]` table never prevents startup: it is ignored with a warning and the defaults apply.
 
-The configuration file is read from `HYPRBARIC_CONFIG` when set, otherwise from `$XDG_CONFIG_HOME/hyprbaric/config.toml` or `~/.config/hyprbaric/config.toml`.
+The configuration file is read from `HYPRBARIC_CONFIG` when set, otherwise from `$XDG_CONFIG_HOME/hyprbaric/config.toml` or `~/.config/hyprbaric/config.toml`. Completion is written back to the same file the configuration was loaded from.
 
 ## Multiple monitors
 
-Only the primary Hyprbaric view opens the automatic guide. Its preview controls the shared appearance settings, so completing the guide updates every bar window. A manual rerun also opens once rather than once per monitor.
+Multi-view embeddings elect a single view to host the automatic guide. Its preview controls the shared appearance settings, so completing the guide updates every bar window, and any redundant automatic guide stands down as soon as completion settles. A manual rerun also opens once rather than once per monitor.

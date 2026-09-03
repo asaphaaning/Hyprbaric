@@ -35,6 +35,7 @@ class AppLauncher extends ConsumerStatefulWidget {
 }
 
 class _AppLauncherState extends ConsumerState<AppLauncher> {
+  static const String _keyboardOwner = 'app-launcher';
   final FocusNode _queryFocusNode = FocusNode(debugLabel: 'app-launcher-query');
   final TextEditingController _queryController = TextEditingController();
   bool _muteQueryNotifications = false;
@@ -71,25 +72,21 @@ class _AppLauncherState extends ConsumerState<AppLauncher> {
 
   void _handleOpened() {
     _dispatchQueryIfCurrent('');
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.exclusive));
+    unawaited(LayerShellController.claimKeyboard(_keyboardOwner));
   }
 
   void _handleClosing() {
     ref.read(launcherControllerProvider.notifier).closed();
     _setQuery('');
     _queryDispatchTimer?.cancel();
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.none));
+    unawaited(LayerShellController.releaseKeyboard(_keyboardOwner));
   }
 
   void _handleDismissed() {
     ref.read(launcherControllerProvider.notifier).closed();
     _setQuery('');
     _queryDispatchTimer?.cancel();
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.none));
-  }
-
-  Future<void> _setKeyboardMode(LayerShellKeyboardMode mode) async {
-    await LayerShellController.setKeyboardMode(mode);
+    unawaited(LayerShellController.releaseKeyboard(_keyboardOwner));
   }
 
   void _handleQueryTextChanged() {

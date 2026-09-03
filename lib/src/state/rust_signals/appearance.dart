@@ -26,6 +26,7 @@ Stream<AppearanceCommandResult> _appearanceCommandResultStream() async* {
 
 const AppearanceStatus defaultAppearanceStatus = AppearanceStatus(
   position: AppearancePosition.top,
+  monitor: AppearanceMonitorTargetPrimary(),
   opacity: 77,
   cornerRadius: 12,
   accentHue: 197,

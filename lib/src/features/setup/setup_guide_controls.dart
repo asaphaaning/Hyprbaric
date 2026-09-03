@@ -369,88 +369,93 @@ class _ChoiceCardState extends State<_ChoiceCard> {
   @override
   Widget build(BuildContext context) {
     final Color accent = context.setupGuideAccent;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(13),
-            gradient: widget.selected
-                ? LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[
-                      Color.lerp(const Color(0xFF343740), accent, .20)!,
-                      Color.lerp(const Color(0xFF292B33), accent, .14)!,
-                    ],
-                  )
-                : LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[
-                      _hovered
-                          ? const Color(0xFF484A54)
-                          : SetupGuideColors.faceTop,
-                      _hovered
-                          ? const Color(0xFF353740)
-                          : SetupGuideColors.faceBottom,
-                    ],
-                  ),
-            border: Border.all(
-              color: widget.selected
-                  ? accent.withValues(alpha: .72)
-                  : const Color(0x59000000),
-              width: widget.selected ? 2.5 : 1,
-            ),
-            boxShadow: <BoxShadow>[
-              const BoxShadow(
-                color: Color(0x17FFFFFF),
-                offset: Offset(0, 1),
-                blurStyle: BlurStyle.inner,
+    return Semantics(
+      button: true,
+      label: widget.title,
+      selected: widget.selected,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(13),
+              gradient: widget.selected
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Color.lerp(const Color(0xFF343740), accent, .20)!,
+                        Color.lerp(const Color(0xFF292B33), accent, .14)!,
+                      ],
+                    )
+                  : LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        _hovered
+                            ? const Color(0xFF484A54)
+                            : SetupGuideColors.faceTop,
+                        _hovered
+                            ? const Color(0xFF353740)
+                            : SetupGuideColors.faceBottom,
+                      ],
+                    ),
+              border: Border.all(
+                color: widget.selected
+                    ? accent.withValues(alpha: .72)
+                    : const Color(0x59000000),
+                width: widget.selected ? 2.5 : 1,
               ),
-              const BoxShadow(
-                color: Color(0x66000000),
-                offset: Offset(0, -1),
-                blurStyle: BlurStyle.inner,
-              ),
-              if (!widget.selected)
+              boxShadow: <BoxShadow>[
                 const BoxShadow(
-                  color: Color(0xA6000000),
-                  blurRadius: 14,
-                  spreadRadius: -8,
-                  offset: Offset(0, 6),
+                  color: Color(0x17FFFFFF),
+                  offset: Offset(0, 1),
+                  blurStyle: BlurStyle.inner,
                 ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              widget.preview,
-              const SizedBox(height: 13),
-              Text(
-                widget.title,
-                style: const TextStyle(
-                  color: Color(0xFFD5D7DC),
-                  fontFamily: 'Inter',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
+                const BoxShadow(
+                  color: Color(0x66000000),
+                  offset: Offset(0, -1),
+                  blurStyle: BlurStyle.inner,
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                widget.subtitle,
-                style: const TextStyle(
-                  color: SetupGuideColors.textFaint,
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  height: 1.45,
+                if (!widget.selected)
+                  const BoxShadow(
+                    color: Color(0xA6000000),
+                    blurRadius: 14,
+                    spreadRadius: -8,
+                    offset: Offset(0, 6),
+                  ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                widget.preview,
+                const SizedBox(height: 13),
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    color: Color(0xFFD5D7DC),
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 5),
+                Text(
+                  widget.subtitle,
+                  style: const TextStyle(
+                    color: SetupGuideColors.textFaint,
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -640,52 +645,60 @@ class _HueSwatch extends StatelessWidget {
       .72,
       .58,
     ).toColor();
-    return GestureDetector(
-      onTap: onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              Color.lerp(color, Colors.white, .18)!,
-              Color.lerp(color, Colors.black, .14)!,
+    return Semantics(
+      button: true,
+      label: 'Accent hue $hue degrees',
+      selected: selected,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                Color.lerp(color, Colors.white, .18)!,
+                Color.lerp(color, Colors.black, .14)!,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: const Color(0x1AFFFFFF)),
+            boxShadow: <BoxShadow>[
+              const BoxShadow(
+                color: Color(0x2EFFFFFF),
+                offset: Offset(0, 1),
+                blurStyle: BlurStyle.inner,
+              ),
+              const BoxShadow(
+                color: Color(0x59000000),
+                blurRadius: 4,
+                offset: Offset(0, -2),
+                blurStyle: BlurStyle.inner,
+              ),
+              const BoxShadow(
+                color: Color(0xBF000000),
+                blurRadius: 9,
+                spreadRadius: -4,
+                offset: Offset(0, 4),
+              ),
+              if (selected) ...<BoxShadow>[
+                const BoxShadow(color: Color(0xFF22242B), spreadRadius: 2),
+                BoxShadow(
+                  color: color.withValues(alpha: .7),
+                  spreadRadius: 3.5,
+                ),
+                BoxShadow(
+                  color: color.withValues(alpha: .55),
+                  blurRadius: 18,
+                  spreadRadius: -6,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ],
           ),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0x1AFFFFFF)),
-          boxShadow: <BoxShadow>[
-            const BoxShadow(
-              color: Color(0x2EFFFFFF),
-              offset: Offset(0, 1),
-              blurStyle: BlurStyle.inner,
-            ),
-            const BoxShadow(
-              color: Color(0x59000000),
-              blurRadius: 4,
-              offset: Offset(0, -2),
-              blurStyle: BlurStyle.inner,
-            ),
-            const BoxShadow(
-              color: Color(0xBF000000),
-              blurRadius: 9,
-              spreadRadius: -4,
-              offset: Offset(0, 4),
-            ),
-            if (selected) ...<BoxShadow>[
-              const BoxShadow(color: Color(0xFF22242B), spreadRadius: 2),
-              BoxShadow(color: color.withValues(alpha: .7), spreadRadius: 3.5),
-              BoxShadow(
-                color: color.withValues(alpha: .55),
-                blurRadius: 18,
-                spreadRadius: -6,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ],
         ),
       ),
     );
@@ -718,48 +731,53 @@ class _Segmented extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: options
             .map(
-              (_SegmentOption option) => GestureDetector(
-                onTap: option.onPressed,
-                child: Container(
-                  height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  alignment: Alignment.center,
-                  decoration: option.selected
-                      ? BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: <Color>[
-                              Color.lerp(
-                                const Color(0xFF40434C),
-                                context.setupGuideAccent,
-                                .26,
-                              )!,
-                              Color.lerp(
-                                const Color(0xFF30323A),
-                                context.setupGuideAccent,
-                                .18,
-                              )!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: const <BoxShadow>[
-                            BoxShadow(
-                              color: Color(0x29FFFFFF),
-                              offset: Offset(0, 1),
-                              blurStyle: BlurStyle.inner,
+              (_SegmentOption option) => Semantics(
+                button: true,
+                label: option.label,
+                selected: option.selected,
+                child: GestureDetector(
+                  onTap: option.onPressed,
+                  child: Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 11),
+                    alignment: Alignment.center,
+                    decoration: option.selected
+                        ? BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: <Color>[
+                                Color.lerp(
+                                  const Color(0xFF40434C),
+                                  context.setupGuideAccent,
+                                  .26,
+                                )!,
+                                Color.lerp(
+                                  const Color(0xFF30323A),
+                                  context.setupGuideAccent,
+                                  .18,
+                                )!,
+                              ],
                             ),
-                          ],
-                        )
-                      : null,
-                  child: Text(
-                    option.label,
-                    style: setupMono(
-                      color: option.selected
-                          ? const Color(0xFFE2E3E8)
-                          : SetupGuideColors.textFaint,
-                      size: 9,
-                      spacing: .4,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: const <BoxShadow>[
+                              BoxShadow(
+                                color: Color(0x29FFFFFF),
+                                offset: Offset(0, 1),
+                                blurStyle: BlurStyle.inner,
+                              ),
+                            ],
+                          )
+                        : null,
+                    child: Text(
+                      option.label,
+                      style: setupMono(
+                        color: option.selected
+                            ? const Color(0xFFE2E3E8)
+                            : SetupGuideColors.textFaint,
+                        size: 9,
+                        spacing: .4,
+                      ),
                     ),
                   ),
                 ),
@@ -786,30 +804,36 @@ class _Progress extends StatelessWidget {
       child: Row(
         children: List<Widget>.generate(SetupStep.sequence.length, (int index) {
           final bool selected = index == activeIndex;
-          return GestureDetector(
-            onTap: () => onSelected(SetupStep.sequence[index]),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: selected ? 18 : 6,
-              height: 6,
-              margin: EdgeInsets.only(
-                right: index == SetupStep.sequence.length - 1 ? 0 : 6,
-              ),
-              decoration: BoxDecoration(
-                color: selected
-                    ? context.setupGuideAccent
-                    : index < activeIndex
-                    ? const Color(0x42FFFFFF)
-                    : const Color(0x21FFFFFF),
-                borderRadius: BorderRadius.circular(selected ? 3 : 6),
-                boxShadow: const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x80000000),
-                    offset: Offset(0, 1),
-                    blurRadius: 2,
-                    blurStyle: BlurStyle.inner,
-                  ),
-                ],
+          final SetupStep step = SetupStep.sequence[index];
+          return Semantics(
+            button: true,
+            label: 'Go to ${step.label} step',
+            selected: selected,
+            child: GestureDetector(
+              onTap: () => onSelected(step),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: selected ? 18 : 6,
+                height: 6,
+                margin: EdgeInsets.only(
+                  right: index == SetupStep.sequence.length - 1 ? 0 : 6,
+                ),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? context.setupGuideAccent
+                      : index < activeIndex
+                      ? const Color(0x42FFFFFF)
+                      : const Color(0x21FFFFFF),
+                  borderRadius: BorderRadius.circular(selected ? 3 : 6),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x80000000),
+                      offset: Offset(0, 1),
+                      blurRadius: 2,
+                      blurStyle: BlurStyle.inner,
+                    ),
+                  ],
+                ),
               ),
             ),
           );

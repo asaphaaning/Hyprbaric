@@ -38,6 +38,7 @@ class NetworkPanel extends StatefulWidget {
 
 class NetworkPanelState extends State<NetworkPanel> {
   static const int _trafficHistoryLength = 50;
+  static const String _keyboardOwner = 'network-password';
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _passwordFocusNode = FocusNode(
     debugLabel: 'network-password',
@@ -127,9 +128,9 @@ class NetworkPanelState extends State<NetworkPanel> {
       _passwordFocusNode.unfocus();
     }
     unawaited(
-      LayerShellController.setKeyboardMode(
-        active ? LayerShellKeyboardMode.exclusive : LayerShellKeyboardMode.none,
-      ),
+      active
+          ? LayerShellController.claimKeyboard(_keyboardOwner)
+          : LayerShellController.releaseKeyboard(_keyboardOwner),
     );
   }
 

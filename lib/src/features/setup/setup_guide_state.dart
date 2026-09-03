@@ -28,7 +28,12 @@ enum SetupLaunch { automatic, manual }
 /// An intentional request to show the guide from application UI.
 enum SetupGuideRequest { show }
 
-/// Only the first native view hosts automatic onboarding.
+/// Whether this view hosts automatic onboarding.
+///
+/// Single-view builds leave this true. A multi-view embedding must override
+/// it so exactly one view reports true; every host still stands down its
+/// automatic guide once completion settles, so a redundant open can never
+/// linger past the first acknowledged journey.
 final setupGuideAutomaticHostProvider = Provider<bool>((_) => true);
 
 final setupGuideRequestProvider =

@@ -17,10 +17,8 @@ const TABLE: &str = "setup";
 )]
 pub(super) fn complete(configuration: &Configuration) -> Result<Configuration, Error> {
     let completed = configuration.completed();
-    let mut result = Ok(());
 
-    config::edit(|document| result = write(document, &completed))?;
-    result?;
+    config::try_edit(|document| write(document, &completed))?;
 
     Ok(completed)
 }

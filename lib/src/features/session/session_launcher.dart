@@ -34,6 +34,7 @@ class SessionLauncher extends ConsumerStatefulWidget {
 }
 
 class _SessionLauncherState extends ConsumerState<SessionLauncher> {
+  static const String _keyboardOwner = 'session-launcher';
   final FocusNode _focusNode = FocusNode(debugLabel: 'session-launcher');
 
   @override
@@ -47,21 +48,17 @@ class _SessionLauncherState extends ConsumerState<SessionLauncher> {
   }
 
   void _handleOpened() {
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.exclusive));
+    unawaited(LayerShellController.claimKeyboard(_keyboardOwner));
   }
 
   void _handleClosing() {
     ref.read(sessionControllerProvider.notifier).closed();
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.none));
+    unawaited(LayerShellController.releaseKeyboard(_keyboardOwner));
   }
 
   void _handleDismissed() {
     ref.read(sessionControllerProvider.notifier).closed();
-    unawaited(_setKeyboardMode(LayerShellKeyboardMode.none));
-  }
-
-  Future<void> _setKeyboardMode(LayerShellKeyboardMode mode) async {
-    await LayerShellController.setKeyboardMode(mode);
+    unawaited(LayerShellController.releaseKeyboard(_keyboardOwner));
   }
 
   bool _canOpen() {

@@ -47,10 +47,29 @@ impl Configuration {
 }
 
 pub(crate) fn writable_user_path() -> Result<PathBuf, Error> {
+    // Reads prefer `HYPRBARIC_CONFIG` first (see `candidates`), so writes
+    // target it when set. Otherwise completion would land in a file the next
+    // launch never reads.
+    if let Some(path) = env::var_os("HYPRBARIC_CONFIG") {
+        return Ok(PathBuf::from(path));
+    }
+
     let Some(config_home) = config_home() else {
         return Err(Error::ConfigHome);
     };
     Ok(config_home.join("hyprbaric/config.toml"))
+}
+
+/// Serializes read-modify-write cycles against the user configuration.
+///
+/// Every editor goes through this lock so concurrent commands from different
+/// modules cannot interleave a read between another command's read and write.
+static EDIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn edit_lock() -> std::sync::MutexGuard<'static, ()> {
+    EDIT_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Edits the writable user configuration and replaces it atomically.
@@ -59,15 +78,40 @@ pub(crate) fn writable_user_path() -> Result<PathBuf, Error> {
 /// shared filesystem operation so parsing and replacement behave consistently.
 #[instrument(skip(apply))]
 pub(crate) fn edit(apply: impl FnOnce(&mut DocumentMut)) -> Result<(), Error> {
-    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    let _guard = LOCK
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    try_edit(|document| {
+        apply(document);
+        Ok::<(), Error>(())
+    })
+}
+
+/// Edits the user configuration, skipping the replacement when `apply` fails.
+///
+/// A fallible editor must never persist a half-applied document, so the file
+/// is left untouched and the original error propagates to the caller.
+#[instrument(skip(apply))]
+pub(crate) fn try_edit<E>(apply: impl FnOnce(&mut DocumentMut) -> Result<(), E>) -> Result<(), E>
+where
+    E: From<Error>,
+{
+    let _guard = edit_lock();
     let path = writable_user_path()?;
-    edit_path(&path, apply)
+    edit_path_fallible(&path, apply)
 }
 
 pub(crate) fn edit_path(path: &Path, apply: impl FnOnce(&mut DocumentMut)) -> Result<(), Error> {
+    edit_path_fallible(path, |document| {
+        apply(document);
+        Ok::<(), Error>(())
+    })
+}
+
+fn edit_path_fallible<E>(
+    path: &Path,
+    apply: impl FnOnce(&mut DocumentMut) -> Result<(), E>,
+) -> Result<(), E>
+where
+    E: From<Error>,
+{
     let source = match fs::read_to_string(path) {
         Ok(source) => source,
         Err(error) if error.kind() == io::ErrorKind::NotFound => String::new(),
@@ -75,18 +119,20 @@ pub(crate) fn edit_path(path: &Path, apply: impl FnOnce(&mut DocumentMut)) -> Re
             return Err(Error::ReadDocument {
                 path: path.to_path_buf(),
                 source,
-            });
+            }
+            .into());
         }
     };
-    let mut document = source
-        .parse::<DocumentMut>()
-        .map_err(|source| Error::ParseDocument {
+    let mut document = source.parse::<DocumentMut>().map_err(|source| {
+        E::from(Error::ParseDocument {
             path: path.to_path_buf(),
             source,
-        })?;
+        })
+    })?;
 
-    apply(&mut document);
-    replace(path, document.to_string().as_bytes())
+    apply(&mut document)?;
+    replace(path, document.to_string().as_bytes())?;
+    Ok(())
 }
 
 fn replace(path: &Path, bytes: &[u8]) -> Result<(), Error> {
@@ -256,11 +302,13 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{fs, time::Duration};
 
     use serde::Deserialize;
 
-    use super::Cadence;
+    use crate::setup;
+
+    use super::{Cadence, Configuration};
 
     #[derive(Debug, Deserialize)]
     struct CadenceFixture {
@@ -290,5 +338,42 @@ mod tests {
             Cadence::milliseconds(300).duration(),
             Duration::from_millis(300)
         );
+    }
+
+    #[test]
+    fn scalar_setup_value_falls_back_to_setup_defaults() {
+        let configuration = toml::from_str::<Configuration>("setup = \"already-complete\"\n")
+            .expect("scalar setup should degrade instead of failing");
+
+        assert_eq!(configuration.setup, setup::Configuration::default());
+    }
+
+    #[test]
+    fn unknown_setup_values_fall_back_to_setup_defaults() {
+        let configuration =
+            toml::from_str::<Configuration>("[setup]\nstartup = \"sometimes\"\ncompleted = 7\n")
+                .expect("malformed setup should degrade instead of failing");
+
+        assert_eq!(configuration.setup, setup::Configuration::default());
+    }
+
+    #[test]
+    fn try_edit_skips_replacement_when_the_editor_fails() {
+        let path = std::env::temp_dir().join(format!(
+            "hyprbaric-config-test-{}-fallible.tmp",
+            std::process::id()
+        ));
+        fs::write(&path, "answer = 42\n").expect("fixture config should be written");
+
+        let result =
+            super::edit_path_fallible(&path, |_| Err::<(), super::Error>(super::Error::ConfigHome));
+
+        assert!(result.is_err());
+        assert_eq!(
+            fs::read_to_string(&path).expect("config should be readable"),
+            "answer = 42\n"
+        );
+
+        let _ = fs::remove_file(&path);
     }
 }

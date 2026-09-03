@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bindings/bindings.dart';
@@ -59,9 +60,7 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
       }
 
       _focusNode.requestFocus();
-      unawaited(
-        LayerShellController.setKeyboardMode(LayerShellKeyboardMode.exclusive),
-      );
+      unawaited(LayerShellController.claimKeyboard(_regionOwner));
       unawaited(_updateRegion());
     });
   }
@@ -76,9 +75,7 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
 
   @override
   void dispose() {
-    unawaited(
-      LayerShellController.setKeyboardMode(LayerShellKeyboardMode.none),
-    );
+    unawaited(LayerShellController.releaseKeyboard(_regionOwner));
     unawaited(
       _regionManager.removePassiveRegions(
         owner: _regionOwner,
@@ -167,75 +164,84 @@ class _SetupGuideOverlayState extends ConsumerState<SetupGuideOverlay> {
     final double barHeight = ref.watch(barHeightProvider) + 3;
 
     return Positioned.fill(
-      child: Focus(
-        autofocus: true,
-        focusNode: _focusNode,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Positioned(
-              top: appearance.position == AppearancePosition.top
-                  ? barHeight
-                  : 0,
-              bottom: appearance.position == AppearancePosition.bottom
-                  ? barHeight
-                  : 0,
-              left: 0,
-              right: 0,
-              child: const ColoredBox(
-                key: ValueKey<String>('setup-guide-scrim'),
-                color: SetupGuideColors.scrim,
+      child: CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.escape): widget.onSkipped,
+        },
+        child: Focus(
+          autofocus: true,
+          focusNode: _focusNode,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              Positioned(
+                top: appearance.position == AppearancePosition.top
+                    ? barHeight
+                    : 0,
+                bottom: appearance.position == AppearancePosition.bottom
+                    ? barHeight
+                    : 0,
+                left: 0,
+                right: 0,
+                child: const ColoredBox(
+                  key: ValueKey<String>('setup-guide-scrim'),
+                  color: SetupGuideColors.scrim,
+                ),
               ),
-            ),
-            Center(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double width = (constraints.maxWidth - 48).clamp(
-                    640,
-                    980,
-                  );
-                  final double height = (constraints.maxHeight - 40).clamp(
-                    500,
-                    600,
-                  );
+              Center(
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final double width = (constraints.maxWidth - 48).clamp(
+                      640,
+                      980,
+                    );
+                    final double height = (constraints.maxHeight - 40).clamp(
+                      500,
+                      600,
+                    );
 
-                  return _GuideCard(
-                    width: width,
-                    height: height,
-                    preview: SetupGuidePreview(
-                      step: _step,
-                      appearance: appearance,
-                      workspaces: workspaces,
-                    ),
-                    controls: SetupGuideControls(
-                      step: _step,
-                      appearance: appearance,
-                      workspaces: workspaces,
-                      accentPresets: _accentPresets,
-                      onStepSelected: _go,
-                      onBack: _back,
-                      onNext: _next,
-                      onSkip: widget.onSkipped,
-                      onOpacityPreview: _previewOpacity,
-                      onOpacityCommitted: _setOpacity,
-                      onAccentPreview: _previewAccent,
-                      onAccentCommitted: _setAccent,
-                      onPositionChanged: (AppearancePosition position) {
-                        ref
-                            .read(appearanceControllerProvider.notifier)
-                            .setPosition(position);
-                      },
-                      onWorkspaceStyleChanged: (WorkspaceIndicatorStyle style) {
-                        ref
-                            .read(workspaceSettingsControllerProvider.notifier)
-                            .setIndicatorStyle(style);
-                      },
-                    ),
-                  );
-                },
+                    return _GuideCard(
+                      width: width,
+                      height: height,
+                      preview: SetupGuidePreview(
+                        step: _step,
+                        appearance: appearance,
+                        workspaces: workspaces,
+                      ),
+                      controls: SetupGuideControls(
+                        step: _step,
+                        appearance: appearance,
+                        workspaces: workspaces,
+                        accentPresets: _accentPresets,
+                        onStepSelected: _go,
+                        onBack: _back,
+                        onNext: _next,
+                        onSkip: widget.onSkipped,
+                        onOpacityPreview: _previewOpacity,
+                        onOpacityCommitted: _setOpacity,
+                        onAccentPreview: _previewAccent,
+                        onAccentCommitted: _setAccent,
+                        onPositionChanged: (AppearancePosition position) {
+                          ref
+                              .read(appearanceControllerProvider.notifier)
+                              .setPosition(position);
+                        },
+                        onWorkspaceStyleChanged:
+                            (WorkspaceIndicatorStyle style) {
+                              ref
+                                  .read(
+                                    workspaceSettingsControllerProvider
+                                        .notifier,
+                                  )
+                                  .setIndicatorStyle(style);
+                            },
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
