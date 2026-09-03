@@ -20,7 +20,7 @@ use super::{
 pub(super) type ClientHandle = Arc<Client>;
 
 /// Connects to the system-tray client.
-#[instrument(skip_all)]
+#[instrument(skip_all, err)]
 pub(super) async fn connect() -> Result<ClientHandle, super::Error> {
     Client::new()
         .await

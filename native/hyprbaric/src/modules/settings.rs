@@ -9,7 +9,7 @@ use super::{Command, Configuration, Error, Module};
 
 const TABLE: &str = "modules";
 
-#[instrument(skip(command))]
+#[instrument(skip(command), err)]
 pub fn save(command: &Command, current: Configuration) -> Result<Configuration, Error> {
     let next = current.apply(command);
     config::edit(|document| write_modules(document, next))?;

@@ -13,7 +13,7 @@ pub(super) struct Backend;
 
 impl Backend {
     /// Runs one color pick command against `hyprpicker`.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn pick(self) -> Result<Color, Failure> {
         let output = Process::new("hyprpicker")
             .arg("--format=hex")

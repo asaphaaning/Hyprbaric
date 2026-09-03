@@ -56,7 +56,7 @@ impl Client {
     }
 
     /// Reads a full NetworkManager snapshot and traffic baseline.
-    #[instrument(skip(self, previous))]
+    #[instrument(skip(self, previous), err)]
     pub(super) async fn read_snapshot(
         &self,
         scan: Scan,
@@ -100,7 +100,7 @@ impl Client {
     }
 
     /// Requests a NetworkManager access-point scan.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn scan(&self) -> Result<(), Error> {
         self.manager()
             .await?
@@ -110,7 +110,7 @@ impl Client {
     }
 
     /// Enables or disables NetworkManager Wi-Fi support.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn set_enabled(&self, enabled: bool) -> Result<(), Error> {
         self.manager()
             .await?
@@ -120,7 +120,7 @@ impl Client {
     }
 
     /// Connects to a visible Wi-Fi network.
-    #[instrument(skip(self, request), fields(ssid = %request.ssid()))]
+    #[instrument(skip(self, request), fields(ssid = %request.ssid()), err)]
     pub(super) async fn connect(&self, request: Connect) -> Result<(), Error> {
         let manager = self.manager().await?;
         let network = manager

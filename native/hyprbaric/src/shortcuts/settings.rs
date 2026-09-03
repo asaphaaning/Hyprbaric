@@ -146,14 +146,14 @@ impl Report {
 }
 
 /// Loads the current effective shortcut settings snapshot.
-#[instrument]
+#[instrument(err)]
 pub fn load() -> Result<Snapshot, Error> {
     let config = config::Configuration::load()?;
     snapshot(&config)
 }
 
 /// Persists a command to the user config and returns the new effective config.
-#[instrument(skip(command))]
+#[instrument(skip(command), err)]
 pub fn save(command: &Command) -> Result<config::Configuration, Error> {
     match command {
         Command::Load => {}

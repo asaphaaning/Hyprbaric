@@ -92,7 +92,8 @@ impl Tray {
             item_id = %activation.item_id.as_str(),
             x = activation.position.x(),
             y = activation.position.y(),
-        )
+        ),
+        err
     )]
     pub async fn activate(&self, activation: Activation) -> Result<Outcome, Error> {
         let Some(client) = &self.client else {
@@ -108,7 +109,8 @@ impl Tray {
         fields(
             item_id = %activation.item_id.as_str(),
             menu_item_id = activation.menu_item_id.get(),
-        )
+        ),
+        err
     )]
     pub async fn activate_menu_item(&self, activation: MenuActivation) -> Result<Outcome, Error> {
         let Some(client) = &self.client else {

@@ -15,7 +15,7 @@ trait Notifications {
 }
 
 /// Requests that the active notification daemon close one notification.
-#[instrument(fields(notification_id = id.as_u32()))]
+#[instrument(fields(notification_id = id.as_u32()), err)]
 pub(super) async fn close(id: NotificationId) -> Result<(), Error> {
     let connection = zbus::Connection::session()
         .await

@@ -11,7 +11,7 @@ const SCHEDULES: &str = "schedules";
 const NIGHT_LIGHT: &str = "night_light";
 
 /// Persists a scheduler command into the user configuration file.
-#[instrument(skip(command))]
+#[instrument(skip(command), err)]
 pub fn save(command: &Command, current: Configuration) -> Result<Configuration, Error> {
     let next = current.apply(command);
     config::edit(|document| write_configuration(document, next))?;

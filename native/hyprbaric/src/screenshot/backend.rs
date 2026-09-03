@@ -51,7 +51,7 @@ struct Monitor {
 
 impl Backend {
     /// Runs one screenshot command against system tools.
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     pub(super) async fn capture(self, command: Command) -> Result<Saved, Failure> {
         let path = capture(command.mode()).await?;
         let clipboard = copy_png(&path).await?;
@@ -60,7 +60,7 @@ impl Backend {
 }
 
 impl Capture {
-    #[instrument]
+    #[instrument(err)]
     async fn new(mode: Mode) -> Result<Self, Failure> {
         let path = screenshots_dir().await?.join(filename());
         let target = match mode {
@@ -71,7 +71,7 @@ impl Capture {
         Ok(Self { target, path })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn run(&self) -> Result<PathBuf, Failure> {
         match self.target {
             Target::Area(area) => grim_area(area, &self.path).await?,
@@ -81,7 +81,7 @@ impl Capture {
     }
 }
 
-#[instrument]
+#[instrument(err)]
 async fn capture(mode: Mode) -> Result<PathBuf, Failure> {
     if mode == Mode::Region {
         let path = screenshots_dir().await?.join(filename());
@@ -96,7 +96,7 @@ async fn capture(mode: Mode) -> Result<PathBuf, Failure> {
     capture.run().await
 }
 
-#[instrument(skip(path))]
+#[instrument(skip(path), err)]
 async fn grimblast_region(path: &Path) -> Result<(), Failure> {
     let output = Process::new("grimblast")
         .env(
@@ -121,7 +121,7 @@ async fn grimblast_region(path: &Path) -> Result<(), Failure> {
     }
 }
 
-#[instrument]
+#[instrument(err)]
 async fn select_region() -> Result<Area, Failure> {
     time::sleep(SELECTION_SETTLE).await;
     let rects = selectable_rects().await?;
@@ -144,7 +144,7 @@ async fn select_region() -> Result<Area, Failure> {
 
 const SELECTION_SETTLE: Duration = Duration::from_millis(180);
 
-#[instrument]
+#[instrument(err)]
 async fn selectable_rects() -> Result<String, Failure> {
     let output = output("hyprctl", &["-j", "monitors"]).await?;
     if !output.status.success() {
@@ -219,7 +219,7 @@ async fn slurp(rects: &str) -> Result<Output, Failure> {
         .map_err(|error| process_io_failure("slurp", error))
 }
 
-#[instrument]
+#[instrument(err)]
 async fn active_window() -> Result<Area, Failure> {
     let output = output("hyprctl", &["-j", "activewindow"]).await?;
     if !output.status.success() {
@@ -234,18 +234,18 @@ async fn active_window() -> Result<Area, Failure> {
     Area::from_window_parts(at, size)
 }
 
-#[instrument(skip(path))]
+#[instrument(skip(path), err)]
 async fn grim_area(area: Area, path: &Path) -> Result<(), Failure> {
     let geometry = area.grim_geometry();
     status("grim", &["-g", geometry.as_str()], Some(path)).await
 }
 
-#[instrument(skip(path))]
+#[instrument(skip(path), err)]
 async fn grim_desktop(path: &Path) -> Result<(), Failure> {
     status("grim", &[], Some(path)).await
 }
 
-#[instrument]
+#[instrument(err)]
 async fn screenshots_dir() -> Result<PathBuf, Failure> {
     let pictures = match output("xdg-user-dir", &["PICTURES"]).await {
         Ok(output) if output.status.success() => {
@@ -293,7 +293,7 @@ fn filename() -> String {
     )
 }
 
-#[instrument(skip(path))]
+#[instrument(skip(path), err)]
 async fn copy_png(path: &Path) -> Result<Clipboard, Failure> {
     let bytes = tokio::fs::read(path).await.map_err(|error| Failure::Io {
         message: format!("failed to read screenshot `{}`: {error}", path.display()),

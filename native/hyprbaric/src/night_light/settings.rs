@@ -10,7 +10,7 @@ use super::{Command, Configuration, Error};
 const TABLE: &str = "night_light";
 
 /// Persists the command into the user configuration file.
-#[instrument(skip(command))]
+#[instrument(skip(command), err)]
 pub fn save(command: &Command, current: Configuration) -> Result<Configuration, Error> {
     let next = current.apply(command);
     config::edit(|document| write_night_light(document, next))?;

@@ -29,7 +29,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    #[instrument]
+    #[instrument(err)]
     pub fn load() -> Result<Self, Error> {
         for candidate in candidates() {
             match read(&candidate)? {
@@ -76,7 +76,7 @@ fn edit_lock() -> std::sync::MutexGuard<'static, ()> {
 ///
 /// Feature modules own the shape of their TOML tables. This boundary owns the
 /// shared filesystem operation so parsing and replacement behave consistently.
-#[instrument(skip(apply))]
+#[instrument(skip(apply), err)]
 pub(crate) fn edit(apply: impl FnOnce(&mut DocumentMut)) -> Result<(), Error> {
     try_edit(|document| {
         apply(document);
@@ -88,10 +88,10 @@ pub(crate) fn edit(apply: impl FnOnce(&mut DocumentMut)) -> Result<(), Error> {
 ///
 /// A fallible editor must never persist a half-applied document, so the file
 /// is left untouched and the original error propagates to the caller.
-#[instrument(skip(apply))]
+#[instrument(skip(apply), err)]
 pub(crate) fn try_edit<E>(apply: impl FnOnce(&mut DocumentMut) -> Result<(), E>) -> Result<(), E>
 where
-    E: From<Error>,
+    E: From<Error> + std::fmt::Debug + std::fmt::Display,
 {
     let _guard = edit_lock();
     let path = writable_user_path()?;

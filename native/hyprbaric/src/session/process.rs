@@ -7,7 +7,7 @@ use tracing::instrument;
 use super::Error;
 
 /// Ends the current Hyprland session.
-#[instrument]
+#[instrument(err)]
 pub(super) fn logout_hyprland() -> Result<(), Error> {
     let command = "hyprctl dispatch exit".to_string();
     let status = Command::new("hyprctl")

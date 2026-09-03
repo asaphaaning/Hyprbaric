@@ -31,7 +31,7 @@ trait LoginSession {
 }
 
 /// Locks the current login1 session.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn lock_current_session() -> Result<(), Error> {
     let connection = system_connection().await?;
     let manager = LoginManagerProxy::new(&connection)
@@ -51,7 +51,7 @@ pub(super) async fn lock_current_session() -> Result<(), Error> {
 }
 
 /// Suspends the system.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn suspend() -> Result<(), Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)
@@ -64,7 +64,7 @@ pub(super) async fn suspend() -> Result<(), Error> {
 }
 
 /// Reboots the system.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn reboot() -> Result<(), Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)
@@ -77,7 +77,7 @@ pub(super) async fn reboot() -> Result<(), Error> {
 }
 
 /// Powers off the system.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn power_off() -> Result<(), Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)
@@ -90,7 +90,7 @@ pub(super) async fn power_off() -> Result<(), Error> {
 }
 
 /// Enables firmware setup and reboots.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn reboot_to_firmware() -> Result<(), Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)
@@ -108,7 +108,7 @@ pub(super) async fn reboot_to_firmware() -> Result<(), Error> {
 }
 
 /// Detects whether reboot-to-firmware is supported.
-#[instrument]
+#[instrument(err)]
 pub(super) async fn firmware_reboot_supported() -> Result<bool, Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)

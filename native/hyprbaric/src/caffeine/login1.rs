@@ -26,7 +26,7 @@ pub struct Guard {
 }
 
 /// Probes whether login1 is reachable.
-#[instrument]
+#[instrument(err)]
 pub async fn probe() -> Result<(), Error> {
     let connection = system_connection().await?;
     LoginManagerProxy::new(&connection)
@@ -36,7 +36,7 @@ pub async fn probe() -> Result<(), Error> {
 }
 
 /// Acquires an idle/sleep inhibitor.
-#[instrument]
+#[instrument(err)]
 pub async fn inhibit() -> Result<Guard, Error> {
     let connection = system_connection().await?;
     let proxy = LoginManagerProxy::new(&connection)

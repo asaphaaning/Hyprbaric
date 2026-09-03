@@ -154,7 +154,7 @@ impl Power {
 }
 
 impl Client {
-    #[instrument]
+    #[instrument(err)]
     async fn new() -> Result<Self, Error> {
         Ok(Self {
             connection: Connection::system()
@@ -203,7 +203,7 @@ impl Client {
         .map_err(Error::CreateProfilesProxy)
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn read_battery(&self) -> Result<Battery, Error> {
         let proxy = self.upower_proxy().await?;
         let is_present = proxy
@@ -257,7 +257,7 @@ impl Client {
         })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn read_profiles(&self) -> Result<Profiles, Error> {
         let proxy = self.profiles_proxy().await?;
         let active = proxy
@@ -292,7 +292,7 @@ impl Client {
         })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), err)]
     async fn set_profile(&self, profile: Profile) -> Result<(), Error> {
         let proxy = self.profiles_proxy().await?;
         proxy

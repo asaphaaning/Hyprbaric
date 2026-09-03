@@ -25,7 +25,7 @@ pub struct Desktop {
 
 impl Desktop {
     /// Connects to Hyprland and reads the initial desktop projection.
-    #[instrument(skip_all)]
+    #[instrument(skip_all, err)]
     pub async fn connect() -> Result<(Self, WorkspaceSnapshot, FocusedWindowSnapshot), Error> {
         let initial_workspace = Workspace::get_active_async()
             .await
